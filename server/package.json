@@ -1,0 +1,8 @@
+{
+  "name": "hyflex-server",
+  "private": true,
+  "version": "1.0.0",
+  "type": "module",
+  "scripts": { "dev": "node --watch src/server.js", "start": "node src/server.js" },
+  "dependencies": { "@supabase/supabase-js": "latest", "connect-pg-simple": "latest", "cors": "latest", "dotenv": "latest", "express": "latest", "express-session": "latest", "pg": "latest" }
+}

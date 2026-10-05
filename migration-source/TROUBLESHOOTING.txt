@@ -1,0 +1,13 @@
+EduLearn video-list/player fix
+
+Root cause:
+The video editor CSS had display:flex !important on .ve-editor-panel.
+That overrode the .hidden class, so the editor appeared immediately and
+covered the course video list. Because no video had been selected yet,
+the YouTube player was empty/black.
+
+Fix:
+.ve-editor-panel.hidden now always wins. The video list is therefore shown
+when videos.html?course_id=<id> is opened. The editor appears only after
+clicking Edit Video, at which point videos.js initializes the selected
+YouTube video.

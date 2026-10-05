@@ -1,0 +1,434 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>EduLearn - Student</title>
+    <link rel="stylesheet" href="style.css">
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <style>
+        .student-section.hidden { display:none !important; }
+
+        /* Student Courses/Videos intentionally reuse the same visual language as the admin pages. */
+        .student-course-filter-note { margin-top: 4px; color: var(--ink-soft); font-size: 13px; }
+        .student-course-count { font-size: 12px; color: var(--ink-soft); }
+        .student-progress-strip { margin-top: 10px; height: 6px; background: #eef2f7; border-radius: 999px; overflow: hidden; }
+        .student-progress-strip > span { display:block; height:100%; background:#2563eb; border-radius:inherit; }
+        .student-video-progress-meta { display:flex; justify-content:space-between; gap:8px; margin-top:7px; font-size:11px; color:#718096; }
+        .student-video-card-footer { display:flex; gap:8px; padding:12px 16px; border-top:1px solid #f3f4f6; background:#fafafa; }
+        .student-video-card-footer button { flex:1; font-size:12px; padding:7px 10px; font-weight:600; }
+        .student-course-card .course-card-actions button { cursor:pointer; }
+        .student-video-filter-bar { margin-bottom: 16px; }
+        .student-video-back { margin-bottom: 14px; }
+        .student-loading, .student-empty { grid-column:1/-1; }
+        @media(max-width:700px){ .courses-grid,.ve-video-grid{grid-template-columns:1fr;} }
+
+        /* Student player: same visual language as the admin video editor. */
+        .student-player-topbar { margin-bottom: 18px; }
+        .student-player-topbar .ve-publish-btn { cursor: pointer; }
+        .student-player-layout {
+            display: grid;
+            grid-template-columns: minmax(0, 1fr);
+            gap: 16px;
+            align-items: stretch;
+            min-width: 0;
+        }
+        .student-player-layout.has-question {
+            grid-template-columns: minmax(0, 1fr) 360px;
+        }
+        .student-player-layout > div:first-child {
+            min-width: 0;
+        }
+        .student-video-player-wrap {
+            position: relative;
+            width: 100%;
+            aspect-ratio: 16 / 9;
+            background: #111827;
+            border: 1px solid var(--line);
+            border-radius: var(--radius-md);
+            overflow: hidden;
+            box-shadow: none;
+        }
+        /* While a question is active, the YouTube iframe is completely non-interactive.
+           The transparent shield sits above the iframe and custom controls. */
+        .student-video-interaction-shield {
+            position: absolute;
+            inset: 0;
+            z-index: 20;
+            display: none;
+            background: transparent;
+            cursor: default;
+        }
+        .student-video-player-wrap.question-active .student-video-interaction-shield {
+            display: block;
+        }
+        .student-video-player-wrap.question-active .student-custom-controls {
+            display: none;
+        }
+        #studentYoutubePlayer,
+        #studentYoutubePlayer iframe {
+            width: 100% !important;
+            height: 100% !important;
+            display: block;
+        }
+        .student-custom-controls {
+            position: absolute;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            z-index: 5;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 10px 12px;
+            background: linear-gradient(transparent, rgba(17,24,39,.96));
+            padding-top: 28px;
+        }
+        .student-custom-controls button {
+            width: 34px;
+            height: 34px;
+            flex: 0 0 34px;
+            border: 1px solid rgba(255,255,255,.22);
+            border-radius: var(--radius-sm);
+            background: rgba(255,255,255,.08);
+            color: white;
+            font-size: 14px;
+        }
+        .student-custom-controls button:hover {
+            background: rgba(255,255,255,.16);
+        }
+        .student-custom-controls input[type="range"] {
+            flex: 1;
+            min-width: 80px;
+            accent-color: var(--accent);
+        }
+        .student-custom-controls span {
+            color: white;
+            font-size: 12px;
+            min-width: 90px;
+            text-align: center;
+            font-variant-numeric: tabular-nums;
+        }
+        .student-playback-speed {
+            flex: 0 0 auto;
+            height: 34px;
+            min-width: 64px;
+            padding: 0 8px;
+            border: 1px solid rgba(255,255,255,.22);
+            border-radius: var(--radius-sm);
+            background: rgba(17,24,39,.88);
+            color: #fff;
+            font-size: 12px;
+            font-weight: 600;
+            outline: none;
+        }
+        .student-playback-speed:hover,
+        .student-playback-speed:focus {
+            background: rgba(255,255,255,.16);
+        }
+        .student-playback-speed:disabled {
+            opacity: .45;
+            cursor: not-allowed;
+        }
+        .student-fullscreen-exit { display: none; }
+        .student-player-meta {
+            margin-top: 12px;
+            padding: 12px 14px;
+            border: 1px solid var(--line);
+            border-radius: var(--radius-md);
+            background: var(--paper-raised);
+        }
+        .student-player-meta-row {
+            display: flex;
+            justify-content: space-between;
+            gap: 10px;
+            margin-bottom: 8px;
+            color: var(--ink-soft);
+            font-size: 12px;
+        }
+        .student-progress-track {
+            height: 5px;
+            overflow: hidden;
+            border-radius: 999px;
+            background: var(--paper-sunken);
+        }
+        .student-progress-track > div {
+            width: 0;
+            height: 100%;
+            border-radius: inherit;
+            background: var(--accent);
+            transition: width .15s ease;
+        }
+        .student-question-panel {
+            min-width: 0;
+            align-self: stretch;
+            display: flex;
+            flex-direction: column;
+            padding: 20px;
+            border: 1px solid var(--line);
+            border-radius: var(--radius-md);
+            background: var(--paper-raised);
+            box-shadow: none;
+            overflow: auto;
+        }
+        .student-question-panel h3 {
+            margin: 8px 0 10px;
+            color: var(--ink);
+            font-size: 18px;
+        }
+        .student-question-status {
+            color: var(--accent-ink);
+            background: var(--accent-soft);
+            border: 1px solid var(--line);
+            border-radius: var(--radius-sm);
+            padding: 8px 10px;
+            font-size: 12px;
+            font-weight: 600;
+        }
+        #studentQuestionText {
+            color: var(--ink);
+            font-size: 14px;
+            line-height: 1.55;
+            margin-bottom: 12px;
+        }
+        #studentQuestionOptions {
+            display: grid;
+            gap: 8px;
+        }
+        .student-option {
+            display: flex;
+            align-items: flex-start;
+            gap: 9px;
+            padding: 10px 11px;
+            border: 1px solid var(--line);
+            border-radius: var(--radius-sm);
+            background: var(--paper);
+            color: var(--ink);
+            font-size: 13px;
+            cursor: pointer;
+        }
+        .student-option:hover { border-color: var(--line-strong); background: var(--paper-sunken); }
+        .student-option input { margin-top: 2px; accent-color: var(--accent); }
+        .student-question-feedback {
+            min-height: 20px;
+            margin: 12px 0;
+            color: var(--ink-soft);
+            font-size: 12px;
+            line-height: 1.45;
+        }
+        .student-question-actions {
+            display: flex;
+            gap: 8px;
+            margin-top: auto;
+            padding-top: 12px;
+            border-top: 1px solid var(--line);
+        }
+        .student-question-actions button { flex: 1; }
+
+        /* Browser fullscreen: keep only the video and question panel side-by-side. */
+        /* Browser fullscreen: the video itself fills the entire viewport.
+           When a question is active, only the question panel shares the screen. */
+        .student-player-layout.is-fullscreen {
+            position: fixed;
+            inset: 0;
+            width: 100vw;
+            height: 100vh;
+            min-height: 100vh;
+            padding: 0;
+            margin: 0;
+            box-sizing: border-box;
+            background: #000;
+            grid-template-columns: minmax(0, 1fr);
+            gap: 0;
+            border-radius: 0;
+        }
+        .student-player-layout.is-fullscreen.has-question {
+            grid-template-columns: minmax(0, 1fr) 380px;
+            gap: 0;
+            background: #000;
+        }
+        .student-player-layout.is-fullscreen > div:first-child {
+            min-height: 0;
+            min-width: 0;
+            display: flex;
+            flex-direction: column;
+        }
+        .student-player-layout.is-fullscreen .student-video-player-wrap {
+            flex: 1 1 auto;
+            width: 100%;
+            height: 100%;
+            min-height: 0;
+            aspect-ratio: auto;
+            border: 0;
+            border-radius: 0;
+            box-shadow: none;
+        }
+        .student-player-layout.is-fullscreen.has-question .student-video-player-wrap {
+            border-radius: 0;
+        }
+        .student-player-layout.is-fullscreen .student-question-panel {
+            border-radius: 0;
+            border-top: 0;
+            border-bottom: 0;
+            border-right: 0;
+        }
+        .student-player-layout.is-fullscreen .student-question-panel { min-height: 0; }
+        .student-player-layout.is-fullscreen .student-fullscreen-open { display: none; }
+        .student-player-layout.is-fullscreen .student-fullscreen-exit { display: block; }
+
+        @media(max-width:900px) {
+            .student-player-layout.has-question,
+            .student-player-layout.is-fullscreen.has-question { grid-template-columns: 1fr; }
+            .student-question-panel { max-height: 42vh; }
+            .student-player-layout.is-fullscreen { overflow: auto; }
+            .student-player-layout.is-fullscreen .student-video-player-wrap { flex: none; aspect-ratio: 16 / 9; }
+        }
+        @media(max-width:600px) {
+            .student-player-meta-row { flex-direction: column; }
+            .student-custom-controls { gap: 6px; padding-left: 8px; padding-right: 8px; }
+            .student-custom-controls span { min-width: 74px; font-size: 11px; }
+            .student-player-topbar .ve-editor-title-area { width: 100%; }
+            .student-player-topbar .ve-editor-actions { width: 100%; }
+            .student-player-topbar .ve-publish-btn { width: 100%; }
+        }
+    </style>
+</head>
+<body>
+<div id="studentPage" class="dashboard">
+    <aside class="sidebar">
+        <div class="sidebar-logo"><div class="logo small">E</div><span>EduLearn</span></div>
+        <nav>
+            <button class="nav-btn active" data-student-section="studentDashboardSection"><span class="nav-icon"><svg class="el-icon " viewBox="0 0 24 24" aria-hidden="true" focusable="false" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg></span>Dashboard</button>
+            <button class="nav-btn" data-student-section="studentCoursesSection"><span class="nav-icon"><svg class="el-icon " viewBox="0 0 24 24" aria-hidden="true" focusable="false" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 5.5A2.5 2.5 0 0 1 6.5 3H20v17H6.5A2.5 2.5 0 0 0 4 22z"/><path d="M4 5.5V22"/><path d="M8 7h8"/></svg></span>Courses</button>
+        </nav>
+        <button id="studentLogout" class="logout-btn">Logout</button>
+    </aside>
+
+    <main class="main">
+        <header class="topbar">
+            <div>
+                <h1>Student Dashboard</h1>
+                <p>Your courses and learning progress</p>
+            </div>
+            <div class="user-profile">
+                <div class="avatar" id="studentAvatar">S</div>
+                <div><strong id="studentTopName">Student</strong><small id="studentTopRoll">-</small></div>
+            </div>
+        </header>
+
+        <section id="studentDashboardSection" class="student-section student-content">
+            <div class="student-welcome">
+                <h2>Welcome, <span id="studentWelcomeName">Student</span></h2>
+                <p>Your academic information and learning progress.</p>
+            </div>
+            <div class="student-info-grid">
+                <div class="info-card"><span>Roll Number</span><strong id="studentRoll">-</strong></div>
+                <div class="info-card"><span>Email</span><strong id="studentEmail">-</strong></div>
+                <div class="info-card"><span>First Name</span><strong id="studentFirstName">-</strong></div>
+                <div class="info-card"><span>Last Name</span><strong id="studentLastName">-</strong></div>
+                <div class="info-card"><span>Branch</span><strong id="studentBranch">-</strong></div>
+                <div class="info-card"><span>Semester</span><strong id="studentSemester">-</strong></div>
+                <div class="info-card"><span>Batch</span><strong id="studentBatch">-</strong></div>
+                <div class="info-card"><span>Regulation</span><strong id="studentRegulation">-</strong></div>
+                <div class="info-card"><span>Academic Year</span><strong id="studentAcademicYear">-</strong></div>
+            </div>
+        </section>
+
+        <section id="studentCoursesSection" class="student-section student-content hidden">
+            <div class="section-header">
+                <div>
+                    <h2>My Courses</h2>
+                    <p class="student-course-filter-note">Courses available for <strong id="courseSemesterLabel">your semester</strong> and <strong id="courseBranchLabel">your branch</strong>.</p>
+                </div>
+                <span id="studentCourseCount" class="student-course-count">0 courses</span>
+            </div>
+
+            <div class="modern-filter-bar">
+                <div class="filter-inputs">
+                    <input type="text" id="studentCourseSearch" class="search-input" placeholder="Search courses...">
+                </div>
+                <button id="clearStudentCourseSearch" class="clear-btn" type="button"><span class="inline-icon"><svg class="el-icon" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="m6 6 12 12M18 6 6 18"/></svg></span> Clear</button>
+            </div>
+
+            <div id="studentCoursesGrid" class="courses-grid"></div>
+        </section>
+
+        <section id="studentVideosSection" class="student-section student-content hidden">
+            <div class="ve-list-panel">
+                <div class="ve-list-header">
+                    <div>
+                        <div class="fx-breadcrumb" style="margin-bottom:4px;">
+                            <button type="button" id="backToCoursesBtn" class="fx-crumb-link"><svg class="el-icon" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5M11 18l-6-6 6-6"/></svg> My Courses</button>
+                            <span>/</span>
+                            <span id="selectedCourseTitle">Course</span>
+                        </div>
+                        <h2 id="selectedCourseVideoHeading">Videos</h2>
+                        <p id="selectedCourseMeta">Videos</p>
+                    </div>
+                    <span id="studentVideoCount" class="student-course-count">0 videos</span>
+                </div>
+
+                <div class="ve-filter-bar student-video-filter-bar">
+                    <input type="text" id="studentVideoSearch" class="search-input" placeholder="Search videos…">
+                </div>
+
+                <div class="ve-ordering-hint">Videos are shown in the same order configured by your instructor.</div>
+                <div id="studentVideosGrid" class="ve-video-grid"></div>
+            </div>
+        </section>
+
+        <section id="studentPlayerSection" class="student-section student-content hidden">
+            <div class="ve-editor-topbar student-player-topbar">
+                <div class="ve-editor-title-area">
+                    <button id="closeVideoBtn" class="ve-back-btn" type="button"><svg class="el-icon" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5M11 18l-6-6 6-6"/></svg> Back to Videos</button>
+                    <div class="ve-title-block">
+                        <h2 id="playerVideoTitle">Video</h2>
+                        <p id="playerVideoDescription" class="ve-editor-meta"></p>
+                    </div>
+                </div>
+                <div class="ve-editor-actions">
+                    <button id="nextVideoBtn" class="ve-publish-btn hidden" type="button">Next Video <svg class="el-icon" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg></button>
+                </div>
+            </div>
+            <div class="student-player-layout">
+                <div>
+                    <div class="student-video-player-wrap">
+                        <div id="studentYoutubePlayer"></div>
+                        <div id="studentVideoInteractionShield" class="student-video-interaction-shield" aria-hidden="true"></div>
+                        <div class="student-custom-controls">
+                            <button id="studentPlayPauseBtn" type="button"><svg class="el-icon" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="13" height="14" rx="2"/><path d="m16 10 5-3v10l-5-3z"/></svg></button>
+                            <input id="studentVideoSeek" type="range" min="0" max="0" step="1" value="0" aria-label="Video progress">
+                            <span id="studentVideoTime">0:00 / 0:00</span>
+                            <select id="studentPlaybackSpeed" class="student-playback-speed" aria-label="Playback speed" title="Playback speed">
+                                <option value="1">1×</option>
+                            </select>
+                            <button id="studentMuteBtn" type="button"><svg class="el-icon" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 10v4h4l5 4V6l-5 4z"/><path d="M16 9a4 4 0 0 1 0 6M18.5 6.5a8 8 0 0 1 0 11"/></svg></button>
+                            <button id="studentFullscreenBtn" class="student-fullscreen-open" type="button"><svg class="el-icon" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M8 3H3v5M16 3h5v5M8 21H3v-5M21 16v5h-5"/></svg></button>
+                            <button id="studentExitFullscreenBtn" class="student-fullscreen-exit" type="button"><svg class="el-icon" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="m6 6 12 12M18 6 6 18"/></svg></button>
+                        </div>
+                    </div>
+                </div>
+
+                <aside id="studentQuestionPanel" class="student-question-panel hidden">
+                    <div class="student-question-status" id="studentQuestionStatus">Question at this point in the video</div>
+                    <h3>Question</h3>
+                    <p id="studentQuestionText"></p>
+                    <div id="studentQuestionOptions"></div>
+                    <p id="studentQuestionExplanation" class="student-question-feedback"></p>
+                    <div class="student-question-actions">
+                        <button id="questionRewatchBtn" class="secondary-btn">↶ Rewatch 15s</button>
+                        <button id="questionSubmitBtn" class="primary-btn">Submit</button>
+                    </div>
+                </aside>
+            </div>
+        </section>
+    </main>
+</div>
+
+<script src="supabase-config.js"></script>
+<script src="icons.js"></script>
+<script src="sidebar-mobile.js"></script>
+<script src="../shared/auth.js"></script>
+<script src="student.js"></script>
+</body>
+</html>

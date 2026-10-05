@@ -1,0 +1,29 @@
+HyFlex - semester-type folders + batch-based courses
+=====================================================
+ORDER: 1) back up Supabase  2) run sql/20_semester_folders_and_batches.sql  3) deploy these files.
+(sql/10_phase1_integrity_and_moves.sql must already have been run.)
+
+NEW RULES
+  * Every academic year gets two folders AUTOMATICALLY (database trigger):
+        Odd  (e.g. Jun-Dec) -> semesters 1, 3, 5, 7
+        Even (e.g. Jan-May) -> semesters 2, 4, 6, 8
+    No manual folder creation. "Sync folders" button = safety net.
+  * A folder only takes courses of its own type (enforced in the UI AND the database).
+  * Adding a course = course name + BATCH(es) + branches.
+      - regulation comes from the batch
+      - semester = batch + folder  (2024 batch in the 2026-27 Odd folder = Sem 5)
+      - tick several batches to create the course for all of them in one go
+      - the course name list reuses existing subjects (no duplicates)
+  * course_offerings now has folder_id and batch_id (folders moved from courses to offerings).
+
+FILES CHANGED
+  sql/20_semester_folders_and_batches.sql   NEW
+  courses.html / courses.js                 folders grouped by year, no Add/Delete folder,
+                                            course form uses Batch instead of Year/Regulation/Semester
+  v_student_courses view                    recreated (same columns + folder_id, batch_id, ...)
+
+MIGRATION NOTES
+  * Existing offerings are back-filled: batch (created if missing), folder, regulation.
+  * Old manual folders are deleted after the back-fill (courses no longer belong to a folder).
+  * If a NOTICE says "SKIPPED ...", read it - some old data needs fixing first.
+  * Add academic years with start_date in the odd-semester start month (e.g. 2026-06-01).

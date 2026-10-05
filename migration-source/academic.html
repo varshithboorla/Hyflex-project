@@ -1,0 +1,321 @@
+<!-- academic.html -->
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>EduLearn - Academic Setup</title>
+
+    <link rel="stylesheet" href="style.css">
+
+    <style>
+        .as-badge { display: inline-block; padding: 2px 10px; border-radius: 999px; background: var(--accent-soft); color: var(--accent-ink); font-size: 12px; font-weight: 600; }
+        .as-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+        .as-actions button { padding: 6px 12px; border: 1px solid var(--line-strong); border-radius: var(--radius-sm); background: var(--paper-raised); color: var(--ink); font: inherit; font-size: 13px; cursor: pointer; }
+        .as-actions button:hover { border-color: var(--accent); color: var(--accent-ink); }
+        .as-actions .as-danger { color: var(--danger); }
+        .as-actions .as-danger:hover { border-color: var(--danger); color: var(--danger); }
+        .as-empty { padding: 24px; text-align: center; color: var(--ink-soft); }
+        .as-section { margin-bottom: 32px; }
+    </style>
+</head>
+
+<body>
+
+    <div class="dashboard">
+
+        <!-- Sidebar -->
+        <aside class="sidebar">
+
+            <div class="sidebar-logo">
+                <div class="logo small">E</div>
+                <span>EduLearn</span>
+            </div>
+
+            <nav>
+
+                <button class="nav-btn" onclick="window.location.href='index.html'">
+                    <span class="nav-icon"><svg class="el-icon " viewBox="0 0 24 24" aria-hidden="true" focusable="false" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg></span>
+                    Dashboard
+                </button>
+
+                <button class="nav-btn" onclick="window.location.href='index.html'">
+                    <span class="nav-icon"><svg class="el-icon " viewBox="0 0 24 24" aria-hidden="true" focusable="false" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg></span>
+                    Students
+                </button>
+
+                <button class="nav-btn" onclick="window.location.href='courses.html'">
+                    <span class="nav-icon"><svg class="el-icon " viewBox="0 0 24 24" aria-hidden="true" focusable="false" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 5.5A2.5 2.5 0 0 1 6.5 3H20v17H6.5A2.5 2.5 0 0 0 4 22z"/><path d="M4 5.5V22"/><path d="M8 7h8"/></svg></span>
+                    Courses
+                </button>
+
+                <button class="nav-btn active">
+                    <span class="nav-icon"><svg class="el-icon " viewBox="0 0 24 24" aria-hidden="true" focusable="false" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="m2 10 10-5 10 5-10 5z"/><path d="M6 12.5V17c3 2 9 2 12 0v-4.5"/><path d="M22 10v6"/></svg></span>
+                    Academic Setup
+                </button>
+
+                <button class="nav-btn" onclick="window.location.href='index.html'">
+                    <span class="nav-icon"><svg class="el-icon " viewBox="0 0 24 24" aria-hidden="true" focusable="false" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.8 1.8 0 0 0 .36 1.98l.06.06-1.4 1.4-.06-.06A1.8 1.8 0 0 0 16.4 18a1.8 1.8 0 0 0-1.4 1.72V20h-2v-.28A1.8 1.8 0 0 0 11.6 18a1.8 1.8 0 0 0-1.96.38l-.06.06-1.4-1.4.06-.06A1.8 1.8 0 0 0 8 15a1.8 1.8 0 0 0-1.72-1.4H6v-2h.28A1.8 1.8 0 0 0 8 10a1.8 1.8 0 0 0-.38-1.96l-.06-.06 1.4-1.4.06.06A1.8 1.8 0 0 0 11.6 6 1.8 1.8 0 0 0 13 4.28V4h2v.28A1.8 1.8 0 0 0 16.4 6a1.8 1.8 0 0 0 1.96-.38l.06-.06 1.4 1.4-.06.06A1.8 1.8 0 0 0 20 9a1.8 1.8 0 0 0 1.72 1.4H22v2h-.28A1.8 1.8 0 0 0 20 14a1.8 1.8 0 0 0-.6 1z"/></svg></span>
+                    Admins
+                </button>
+
+            </nav>
+
+            <button id="adminLogout" class="logout-btn">
+                Logout
+            </button>
+
+        </aside>
+
+
+        <main class="main">
+
+            <header class="topbar">
+
+                <div>
+                    <h1>Academic Setup</h1>
+                    <p>Academic years, regulations and batches decide which courses each student sees</p>
+                </div>
+
+                <div class="user-profile">
+                    <div class="avatar">A</div>
+                    <div>
+                        <strong>Administrator</strong>
+                        <small id="adminEmail">-</small>
+                    </div>
+                </div>
+
+            </header>
+
+
+            <!-- ACADEMIC YEARS -->
+
+            <section class="content-section as-section">
+
+                <div class="section-header">
+                    <div>
+                        <h2>Academic Years</h2>
+                        <p>Exactly one year is marked as current. New students and semester moves use it.</p>
+                    </div>
+                    <button id="addYearBtn" class="primary-btn">+ Add Academic Year</button>
+                </div>
+
+                <div class="table-card">
+                    <div class="table-container">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>Academic Year</th>
+                                    <th>Start</th>
+                                    <th>End</th>
+                                    <th>Status</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="yearsTable"></tbody>
+                        </table>
+                    </div>
+                </div>
+
+            </section>
+
+
+            <!-- REGULATIONS -->
+
+            <section class="content-section as-section">
+
+                <div class="section-header">
+                    <div>
+                        <h2>Regulations</h2>
+                        <p>Curriculum versions such as R23 or R25.</p>
+                    </div>
+                    <button id="addRegulationBtn" class="primary-btn">+ Add Regulation</button>
+                </div>
+
+                <div class="table-card">
+                    <div class="table-container">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>Code</th>
+                                    <th>Name</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="regulationsTable"></tbody>
+                        </table>
+                    </div>
+                </div>
+
+            </section>
+
+
+            <!-- BATCHES -->
+
+            <section class="content-section as-section">
+
+                <div class="section-header">
+                    <div>
+                        <h2>Batches</h2>
+                        <p>Each admission group belongs to one regulation. Students inherit it from their batch.</p>
+                    </div>
+                    <button id="addBatchBtn" class="primary-btn">+ Add Batch</button>
+                </div>
+
+                <div class="table-card">
+                    <div class="table-container">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>Batch</th>
+                                    <th>Regulation</th>
+                                    <th>Students</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="batchesTable"></tbody>
+                        </table>
+                    </div>
+                </div>
+
+            </section>
+
+        </main>
+
+    </div>
+
+
+    <!-- ACADEMIC YEAR MODAL -->
+
+    <div id="yearModal" class="modal-overlay" style="display: none;">
+        <div class="modal-box">
+
+            <div class="modal-header">
+                <h2>Add Academic Year</h2>
+                <button id="closeYearModal" class="modal-close">&times;</button>
+            </div>
+
+            <div class="modal-body">
+
+                <div class="form-group">
+                    <label for="yearLabelInput">Label</label>
+                    <input type="text" id="yearLabelInput" placeholder="e.g. 2026-27" autocomplete="off">
+                </div>
+
+                <div class="form-group">
+                    <label for="yearStartInput">Start date</label>
+                    <input type="date" id="yearStartInput">
+                </div>
+
+                <div class="form-group">
+                    <label for="yearEndInput">End date</label>
+                    <input type="date" id="yearEndInput">
+                </div>
+
+                <div class="form-group">
+                    <label class="checkbox-label">
+                        <input type="checkbox" id="yearCurrentInput">
+                        Make this the current academic year
+                    </label>
+                </div>
+
+                <div id="yearMessage" class="modal-message"></div>
+
+            </div>
+
+            <div class="modal-footer">
+                <button id="cancelYearModal" class="secondary-btn">Cancel</button>
+                <button id="saveYearBtn" class="primary-btn">Save</button>
+            </div>
+
+        </div>
+    </div>
+
+
+    <!-- REGULATION MODAL -->
+
+    <div id="regulationModal" class="modal-overlay" style="display: none;">
+        <div class="modal-box">
+
+            <div class="modal-header">
+                <h2>Add Regulation</h2>
+                <button id="closeRegulationModal" class="modal-close">&times;</button>
+            </div>
+
+            <div class="modal-body">
+
+                <div class="form-group">
+                    <label for="regulationCodeInput">Code</label>
+                    <input type="text" id="regulationCodeInput" placeholder="e.g. R25" maxlength="20" autocomplete="off">
+                </div>
+
+                <div class="form-group">
+                    <label for="regulationNameInput">
+                        Name <span class="optional-tag">(optional)</span>
+                    </label>
+                    <input type="text" id="regulationNameInput" placeholder="e.g. Regulation 2025" autocomplete="off">
+                </div>
+
+                <div id="regulationMessage" class="modal-message"></div>
+
+            </div>
+
+            <div class="modal-footer">
+                <button id="cancelRegulationModal" class="secondary-btn">Cancel</button>
+                <button id="saveRegulationBtn" class="primary-btn">Save</button>
+            </div>
+
+        </div>
+    </div>
+
+
+    <!-- BATCH MODAL -->
+
+    <div id="batchModal" class="modal-overlay" style="display: none;">
+        <div class="modal-box">
+
+            <div class="modal-header">
+                <h2 id="batchModalTitle">Add Batch</h2>
+                <button id="closeBatchModal" class="modal-close">&times;</button>
+            </div>
+
+            <div class="modal-body">
+
+                <div class="form-group">
+                    <label for="batchYearInput">Admission year</label>
+                    <input type="number" id="batchYearInput" placeholder="e.g. 2026" min="2000" max="2100">
+                </div>
+
+                <div class="form-group">
+                    <label for="batchDurationInput">Programme length (years)</label>
+                    <input type="number" id="batchDurationInput" value="4" min="1" max="8">
+                </div>
+
+                <div class="form-group">
+                    <label for="batchRegulationInput">Regulation</label>
+                    <select id="batchRegulationInput"></select>
+                </div>
+
+                <div id="batchMessage" class="modal-message"></div>
+
+            </div>
+
+            <div class="modal-footer">
+                <button id="cancelBatchModal" class="secondary-btn">Cancel</button>
+                <button id="saveBatchBtn" class="primary-btn">Save</button>
+            </div>
+
+        </div>
+    </div>
+
+
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="supabase-config.js"></script>
+    <script src="icons.js"></script>
+    <script src="sidebar-mobile.js"></script>
+    <script src="academic.js"></script>
+
+</body>
+</html>

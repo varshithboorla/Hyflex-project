@@ -1,0 +1,1 @@
+export default function StudentPage() { return <div className="min-h-screen p-8"><h1 className="text-2xl font-bold">Student</h1><p className="mt-2 text-slate-500">Student portal will be migrated here page-by-page.</p></div> }

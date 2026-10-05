@@ -1,0 +1,28 @@
+CUMULATIVE SCORE / WATCHED % UPDATE
+===================================
+
+DEFINITIONS (per student, for the topic/video being viewed = Topic N)
+  Topic Score           = correct_answers / total_questions x 100 for Topic N
+                          (change VIDEO_TOPIC_SCORE_BASIS to "solved" in app.js to use questions_solved)
+  Cumulative Score      = average of the Topic Scores of Topic 1..N  (untouched topics count as 0)
+                          e.g. T1=100, T2=80, T3 not started  ->  (100+80+0)/3 = 60
+  Topic Watched %       = max_watched_seconds / video length x 100 for Topic N
+  Cumulative Watched %  = average of the Watched % of Topic 1..N
+  Topics Completed      = number of topics in 1..N whose video is completed
+  Topics Not Completed  = N - Topics Completed
+
+  "Topic 1..N" = videos of the same course offering, ordered by display_order.
+
+STEPS
+  1. Run sql/35_cumulative_report_support.sql in the Supabase SQL editor (optional but recommended):
+       videos.duration_seconds  - stores video length so Watched % is instant
+       students.section         - D1 / D2 / D3 grouping (optional)
+  2. Deploy this project.
+  3. Admin > Video Progress > View Students on a video. New columns appear in the table,
+     CSV, Excel, and the two printable reports.
+
+FILES CHANGED
+  app.js     metrics engine, paged loading (>1000 rows), new table columns, CSV/Excel columns,
+             Print Report (new columns, landscape A4), new Cumulative Report (department-wise)
+  index.html new table headers + "Cumulative Report" button
+  sql/35_cumulative_report_support.sql  NEW

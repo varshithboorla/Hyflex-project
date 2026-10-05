@@ -1,0 +1,466 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>EduLearn – Videos</title>
+    <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%232563eb'/%3E%3Ctext x='32' y='43' text-anchor='middle' font-family='Arial' font-size='36' font-weight='700' fill='white'%3EE%3C/text%3E%3C/svg%3E">
+    <link rel="stylesheet" href="style.css">
+    <style>
+        /* Additions for: timeline, skip selection bar, availability card */
+        .ve-top-editor-toolbar { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; }
+        .ve-top-editor-actions { display: flex; flex-wrap: wrap; gap: 10px; }
+        .ve-top-editor-toolbar.hidden,
+        .ve-availability-card.hidden { display: none !important; }
+        .ve-top-action.active { border-color: var(--accent) !important; background: var(--accent-soft) !important; color: var(--accent-ink) !important; }
+        .ve-skip-selection-status { display: inline-flex; align-items: center; gap: 10px; padding: 7px 12px; border: 1px solid var(--line-strong); border-radius: var(--radius-sm); background: var(--accent-soft); color: var(--accent-ink); font-size: 12px; }
+        .ve-skip-selection-status.hidden { display: none; }
+        .ve-selection-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--accent); animation: veDotPulse 1.2s ease-in-out infinite; }
+        .ve-skip-selection-status button { border: 0; padding: 0; background: none; color: inherit; font: inherit; text-decoration: underline; cursor: pointer; }
+        .ve-timeline { touch-action: none; user-select: none; }
+        .ve-timeline:focus-visible { outline: 2px solid var(--accent); outline-offset: 5px; border-radius: 4px; }
+        .ve-tl-tooltip.hidden { display: none; }
+        @keyframes veDotPulse { 50% { opacity: .3; } }
+    </style>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+</head>
+
+<body>
+
+    <div id="videosPage" class="dashboard">
+
+        <!-- ===================== SIDEBAR ===================== -->
+        <aside class="sidebar">
+            <div class="sidebar-logo">
+                <div class="logo small">E</div>
+                <span>EduLearn</span>
+            </div>
+            <nav>
+                <button class="nav-btn" onclick="window.location.href='index.html'"><span class="nav-icon"><svg class="el-icon " viewBox="0 0 24 24" aria-hidden="true" focusable="false" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg></span> Dashboard</button>
+                <button class="nav-btn" onclick="window.location.href='index.html'"><span class="nav-icon"><svg class="el-icon " viewBox="0 0 24 24" aria-hidden="true" focusable="false" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg></span> Students</button>
+                <button class="nav-btn active" onclick="window.location.href='courses.html'"><span class="nav-icon"><svg class="el-icon " viewBox="0 0 24 24" aria-hidden="true" focusable="false" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 5.5A2.5 2.5 0 0 1 6.5 3H20v17H6.5A2.5 2.5 0 0 0 4 22z"/><path d="M4 5.5V22"/><path d="M8 7h8"/></svg></span>
+                    Courses</button>
+                <button class="nav-btn" onclick="window.location.href='academic.html'"><span class="nav-icon"><svg class="el-icon " viewBox="0 0 24 24" aria-hidden="true" focusable="false" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="m2 10 10-5 10 5-10 5z"/><path d="M6 12.5V17c3 2 9 2 12 0v-4.5"/><path d="M22 10v6"/></svg></span> Academic Setup</button>
+                <button class="nav-btn" onclick="window.location.href='index.html'"><span class="nav-icon"><svg class="el-icon " viewBox="0 0 24 24" aria-hidden="true" focusable="false" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.8 1.8 0 0 0 .36 1.98l.06.06-1.4 1.4-.06-.06A1.8 1.8 0 0 0 16.4 18a1.8 1.8 0 0 0-1.4 1.72V20h-2v-.28A1.8 1.8 0 0 0 11.6 18a1.8 1.8 0 0 0-1.96.38l-.06.06-1.4-1.4.06-.06A1.8 1.8 0 0 0 8 15a1.8 1.8 0 0 0-1.72-1.4H6v-2h.28A1.8 1.8 0 0 0 8 10a1.8 1.8 0 0 0-.38-1.96l-.06-.06 1.4-1.4.06.06A1.8 1.8 0 0 0 11.6 6 1.8 1.8 0 0 0 13 4.28V4h2v.28A1.8 1.8 0 0 0 16.4 6a1.8 1.8 0 0 0 1.96-.38l.06-.06 1.4 1.4-.06.06A1.8 1.8 0 0 0 20 9a1.8 1.8 0 0 0 1.72 1.4H22v2h-.28A1.8 1.8 0 0 0 20 14a1.8 1.8 0 0 0-.6 1z"/></svg></span> Admins</button>
+            </nav>
+            <button id="adminLogout" class="logout-btn">Logout</button>
+        </aside>
+
+        <!-- ===================== MAIN ===================== -->
+        <main class="main">
+
+            <!-- Topbar -->
+            <header class="topbar">
+                <div>
+                    <h1 id="pageTitle">Course Videos</h1>
+                    <p id="pageSubtitle">Manage videos for the selected course</p>
+                </div>
+                <div class="user-profile">
+                    <div class="avatar">A</div>
+                    <div>
+                        <strong>Administrator</strong>
+                        <small id="adminEmail">–</small>
+                    </div>
+                </div>
+            </header>
+
+            <!-- ======================================================
+             TWO-PANEL WORKSPACE
+             Left  → video list for selected course
+             Right → interactive video editor (hidden until a video is opened)
+        ====================================================== -->
+            <div class="ve-workspace" id="veWorkspace">
+
+                <!-- ─── LEFT PANEL: Video List ─── -->
+                <section class="ve-list-panel" id="veListPanel">
+
+                    <div class="ve-list-header">
+                        <div>
+                            <h2 id="courseLabel">All Videos</h2>
+                            <p id="courseDesc">Select a course below or from the filter</p>
+                        </div>
+                        <button id="addVideoBtn" class="primary-btn">+ Add Video</button>
+                    </div>
+
+                    <!-- Search videos within the selected course -->
+                    <div class="ve-filter-bar">
+                        <input type="text" id="videoSearch" class="search-input" placeholder="Search videos…">
+                    </div>
+
+                    <!-- Video cards -->
+                    <div class="ve-ordering-hint">Videos are numbered by position. New videos are added to the end. Use
+                        ↑ / ↓ to change position.</div>
+                    <div id="videosGrid" class="ve-video-grid">
+                        <!-- populated by videos.js -->
+                        <div class="ve-empty-state">
+                            <div class="ve-empty-icon"><svg class="el-icon" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="13" height="14" rx="2"/><path d="m16 10 5-3v10l-5-3z"/></svg></div>
+                            <strong>No videos yet</strong>
+                            <p>Add a video to get started</p>
+                        </div>
+                    </div>
+
+                </section>
+
+                <!-- VIDEO EDITOR -->
+                <section class="ve-editor-panel hidden" id="veEditorPanel">
+
+                    <!-- Top header -->
+                    <div class="ve-editor-topbar">
+                        <div class="ve-editor-title-area">
+                            <button id="btnBackToList" class="ve-back-btn" title="Back to video list"><svg class="el-icon" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5M11 18l-6-6 6-6"/></svg> Back</button>
+                            <div class="ve-title-block">
+                                <h2 id="editorVideoTitle">Video Editor</h2>
+                                <p id="editorVideoMeta" class="ve-editor-meta"></p>
+                            </div>
+                        </div>
+
+                        <div class="ve-editor-actions">
+                            <div class="ve-mode-toggle" id="veModeToggle">
+                                <button id="btnModeEdit" class="ve-mode-btn active" title="Edit questions and skips"><svg class="el-icon" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L8 18l-4 1 1-4Z"/></svg> Edit</button>
+                                <button id="btnModePreview" class="ve-mode-btn" title="Preview as student"><svg class="el-icon" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s3.5-6 10-6 10 6 10 6-3.5 6-10 6S2 12 2 12Z"/><circle cx="12" cy="12" r="2.5"/></svg> Preview</button>
+                            </div>
+                            <button id="btnPublishVideo" class="ve-publish-btn" title="Save all questions and skips to database">
+                                <svg class="el-icon" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m5 12 4 4L19 6"/></svg> Save to Database
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="ve-editor-scroll">
+
+                        <div class="ve-editor-main">
+
+                            <!-- Primary editor actions: always directly above the video -->
+                            <div class="ve-top-editor-toolbar" id="veTopEditorToolbar">
+                                <div class="ve-top-editor-actions">
+                                    <button id="btnTopAddQuestion" class="ve-top-action ve-top-action-question" type="button">
+                                        <span class="ve-top-action-icon">?</span>
+                                        <span>+ Add Question</span>
+                                    </button>
+                                    <button id="btnTopAddSkip" class="ve-top-action ve-top-action-skip" type="button">
+                                        <span class="ve-top-action-icon">⏭</span>
+                                        <span id="btnTopAddSkipText">+ Add Skip</span>
+                                    </button>
+                                </div>
+                                <div id="skipSelectionStatus" class="ve-skip-selection-status hidden" aria-live="polite">
+                                    <span class="ve-selection-dot"></span>
+                                    <span id="skipSelectionText">Select a start point on the timeline</span>
+                                    <button id="btnCancelSkipSelection" type="button">Cancel</button>
+                                </div>
+                            </div>
+
+                            <div class="ve-player-col">
+
+                                <!-- Main video workspace -->
+                                <div class="ve-player-card">
+                                    <div class="ve-player-wrapper" id="vePlayerWrapper">
+                                        <div id="veYoutubePlayer"></div>
+
+                                        <div id="veClickShield" class="ve-click-shield">
+                                            <div id="vePlayIndicator" class="ve-play-indicator hidden"><svg class="el-icon" viewBox="0 0 24 24" aria-hidden="true" fill="currentColor"><path d="m8 5 11 7-11 7z"/></svg></div>
+                                        </div>
+
+                                        <button id="btnCC" class="ve-player-cc" title="Turn captions on/off"
+                                            aria-label="Turn captions on/off" aria-pressed="false">CC</button>
+
+                                        <div id="veQuizOverlay" class="ve-quiz-overlay hidden">
+                                            <div class="ve-quiz-card">
+                                                <div class="ve-quiz-header">
+                                                    <span class="ve-quiz-badge">Interactive Question</span>
+                                                    <span id="veQuizTimestamp" class="ve-quiz-ts">00:00</span>
+                                                </div>
+                                                <p id="veQuizQuestion" class="ve-quiz-question"></p>
+                                                <div id="veQuizOptions" class="ve-quiz-options"></div>
+                                                <div id="veQuizFeedback" class="ve-quiz-feedback hidden"></div>
+                                                <button id="btnSubmitAnswer" class="primary-btn ve-submit-answer-btn">Submit Answer</button>
+                                            </div>
+                                        </div>
+
+                                        <div id="veToastContainer" class="ve-toast-container"></div>
+                                    </div>
+
+                                    <div class="ve-timeline-wrap" id="veTimelineWrap">
+                                        <div class="ve-time-row">
+                                            <span id="veCurrentTime">00:00</span>
+                                            <span id="veDuration">00:00</span>
+                                        </div>
+                                        <div class="ve-timeline" id="veTimeline" title="Click to seek">
+                                            <div class="ve-tl-rail"></div>
+                                            <div id="veTimelineSkips" class="ve-tl-skips"></div>
+                                            <div id="veTimelineProgress" class="ve-tl-progress"></div>
+                                            <div id="veTimelineMarkers" class="ve-tl-markers"></div>
+                                            <div id="veTimelineThumb" class="ve-tl-thumb"></div>
+                                            <div id="veTimelineTooltip" class="ve-tl-tooltip hidden">00:00</div>
+                                        </div>
+                                    </div>
+
+                                    <div class="ve-controls-bar">
+                                        <div class="ve-controls-left">
+                                            <button id="btnPlayPause" class="ve-ctrl-btn ve-play-btn" title="Play / Pause">
+                                                <span id="vePlayIcon"><svg class="el-icon" viewBox="0 0 24 24" aria-hidden="true" fill="currentColor"><path d="m8 5 11 7-11 7z"/></svg></span>
+                                            </button>
+                                            <button id="btnSeekBack" class="ve-ctrl-btn" title="Back 10 seconds">−10s</button>
+                                            <button id="btnSeekFwd" class="ve-ctrl-btn" title="Forward 10 seconds">+10s</button>
+                                            <div class="ve-volume-wrap">
+                                                <button id="btnMute" class="ve-icon-btn" title="Mute"><svg class="el-icon" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 10v4h4l5 4V6l-5 4z"/><path d="M16 9a4 4 0 0 1 0 6M18.5 6.5a8 8 0 0 1 0 11"/></svg></button>
+                                                <input type="range" id="veVolumeSlider" min="0" max="100" value="100" class="ve-volume-slider">
+                                                <div id="vePlaybackSpeedControl" class="hidden">
+                                                <select id="vePlaybackSpeed" class="ve-ctrl-btn" title="Playback speed" aria-label="Playback speed">
+                                                    <option value="1.00">1×</option>
+                                                </select>
+                                            </div>
+                                        </div>
+                                        </div>
+                                        <button id="btnFullscreen" class="ve-ctrl-btn ve-fullscreen-btn" title="Fullscreen"><svg class="el-icon" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M8 3H3v5M16 3h5v5M8 21H3v-5M21 16v5h-5"/></svg></button>
+                                    </div>
+
+                                    <div id="veAdminControls" class="ve-legacy-skip-controls" aria-hidden="true">
+                                        <button id="btnSkipStart" class="ve-ctrl-secondary">Skip Start (<span id="lblSkipStart">––:––</span>)</button>
+                                        <button id="btnSkipEnd" class="ve-ctrl-secondary">Skip End (<span id="lblSkipEnd">––:––</span>)</button>
+                                        <button id="btnConfirmSkip" class="ve-ctrl-warning">Add Skip</button>
+                                    </div>
+
+                                    <div class="ve-status-row">
+                                        <span id="veModeBadge" class="ve-mode-badge">Edit Mode</span>
+                                    </div>
+                                </div>
+
+                                <!-- Availability: start date / end date -->
+                                <div class="ve-settings-card ve-availability-card" id="veAvailabilityCard">
+                                    <div class="ve-settings-title">
+                                        <span class="nav-icon"><svg class="el-icon " viewBox="0 0 24 24" aria-hidden="true" focusable="false" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="17" rx="2"/><path d="M16 2v4M8 2v4M3 9h18"/></svg></span>
+                                        <div>
+                                            <h4>Availability</h4>
+                                            <p>Choose when students can watch this video. Leave a date blank for no limit.</p>
+                                        </div>
+                                    </div>
+                                    <div class="ve-availability-grid">
+                                        <div class="ve-date-field">
+                                            <label for="settingStartDate">Start Date</label>
+                                            <input type="date" id="settingStartDate">
+                                            <span class="ve-date-hint">Students can watch from this date.</span>
+                                        </div>
+                                        <div class="ve-date-field">
+                                            <label for="settingEndDate">End Date</label>
+                                            <input type="date" id="settingEndDate">
+                                            <span class="ve-date-hint">The video closes after this date.</span>
+                                        </div>
+                                    </div>
+                                    <div id="availabilityError" class="ve-date-error hidden" role="alert"></div>
+                                </div>
+
+                                <!-- Student settings -->
+                                <div class="ve-settings-card" id="veSettingsCard">
+                                    <div class="ve-settings-title">
+                                        <span><svg class="el-icon" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.8 1.8 0 0 0 .36 1.98l.06.06-1.4 1.4-.06-.06A1.8 1.8 0 0 0 16.4 18a1.8 1.8 0 0 0-1.4 1.72V20h-2v-.28A1.8 1.8 0 0 0 11.6 18a1.8 1.8 0 0 0-1.96.38l-.06.06-1.4-1.4.06-.06A1.8 1.8 0 0 0 8 15a1.8 1.8 0 0 0-1.72-1.4H6v-2h.28A1.8 1.8 0 0 0 8 10a1.8 1.8 0 0 0-.38-1.96l-.06-.06 1.4-1.4.06.06A1.8 1.8 0 0 0 11.6 6 1.8 1.8 0 0 0 13 4.28V4h2v.28A1.8 1.8 0 0 0 16.4 6a1.8 1.8 0 0 0 1.96-.38l.06-.06 1.4 1.4-.06.06A1.8 1.8 0 0 0 20 9a1.8 1.8 0 0 0 1.72 1.4H22v2h-.28A1.8 1.8 0 0 0 20 14a1.8 1.8 0 0 0-.6 1z"/></svg></span>
+                                        <div>
+                                            <h4>Student Preview Settings</h4>
+                                            <p>Control how students interact with this video.</p>
+                                        </div>
+                                    </div>
+                                    <div class="ve-settings-options">
+                                        <label class="ve-checkbox-label">
+                                            <input type="checkbox" id="settingBlockForward" checked>
+                                            <span>Block forward seeking in Preview</span>
+                                        </label>
+                                        <label class="ve-checkbox-label">
+                                            <input type="checkbox" id="settingPauseAtQuestions" checked>
+                                            <span>Pause video at question timestamps</span>
+                                        </label>
+                                        <label class="ve-checkbox-label">
+                                            <span>Maximum Playback Speed</span>
+                                            <select id="settingPlaybackSpeed" class="ve-ctrl-btn" title="Maximum playback speed allowed for students">
+                                                <option value="1.00">1×</option>
+                                                <option value="1.25">1.25×</option>
+                                                <option value="1.50">1.5×</option>
+                                                <option value="1.75">1.75×</option>
+                                                <option value="2.00">2×</option>
+                                            </select>
+                                        </label>
+                                    </div>
+                                </div>
+
+                                <!-- Right interaction rail -->
+                                <aside class="ve-interaction-rail" aria-label="Video interactions">
+                                    <section class="ve-side-card ve-interaction-card" id="veQuestionsPanel">
+                                        <div class="ve-side-card-header">
+                                            <div class="ve-panel-title">
+                                                <span class="ve-panel-icon">?</span>
+                                                <div>
+                                                    <h3>Questions</h3>
+                                                    <span class="ve-panel-subtitle">Pause points &amp; assessments</span>
+                                                </div>
+                                                <span id="questionsCount" class="ve-count-badge">0</span>
+                                            </div>
+                                            <button id="btnOpenQModal" class="primary-btn ve-side-add-btn" type="button" aria-hidden="true" tabindex="-1">+ Add</button>
+                                        </div>
+                                        <div id="questionsList" class="ve-items-list">
+                                            <div class="ve-inner-empty">
+                                                <span class="ve-empty-panel-icon">?</span>
+                                                <strong>No questions yet</strong>
+                                                <span>Add a question at the current playback time.</span>
+                                            </div>
+                                        </div>
+                                    </section>
+
+                                    <section class="ve-side-card ve-interaction-card" id="veSkipsPanel">
+                                        <div class="ve-side-card-header">
+                                            <div class="ve-panel-title">
+                                                <span class="ve-panel-icon ve-panel-icon-skip">⏭</span>
+                                                <div>
+                                                    <h3>Skip Sections</h3>
+                                                    <span class="ve-panel-subtitle">Automatic playback skips</span>
+                                                </div>
+                                                <span id="skipsCount" class="ve-count-badge ve-count-warning">0</span>
+                                            </div>
+                                            <button id="btnAddSkipQuick" class="ve-side-add-btn ve-side-add-secondary" type="button" aria-hidden="true" tabindex="-1">+ Add</button>
+                                        </div>
+                                        <div class="ve-side-helper">
+                                            <span class="ve-status-dot"></span> Auto-skip enabled
+                                        </div>
+                                        <div id="skipsList" class="ve-items-list">
+                                            <div class="ve-inner-empty">
+                                                <span class="ve-empty-panel-icon">⏭</span>
+                                                <strong>No skip sections yet</strong>
+                                                <span>Mark a start and end while the video is playing.</span>
+                                            </div>
+                                        </div>
+                                    </section>
+                                </aside>
+
+                            </div>
+                        </div>
+                    </div>
+                </section><!-- /ve-editor-panel -->
+
+            </div><!-- /ve-workspace -->
+
+        </main>
+    </div>
+
+
+    <!-- ===================================================
+     ADD / EDIT VIDEO MODAL
+=================================================== -->
+    <div id="videoModal" class="modal-overlay" style="display:none;">
+        <div class="modal-box">
+            <div class="modal-header">
+                <h2 id="videoModalTitle">Add Video</h2>
+                <button id="closeVideoModal" class="modal-close">&times;</button>
+            </div>
+            <div class="modal-body">
+                <input type="hidden" id="editVideoId">
+                <div class="form-group">
+                    <label for="videoTitleInput">Video Title</label>
+                    <input type="text" id="videoTitleInput" placeholder="Enter video title" autocomplete="off">
+                </div>
+                <div class="form-group">
+                    <label for="videoUrlInput">YouTube URL</label>
+                    <input type="text" id="videoUrlInput" placeholder="https://www.youtube.com/watch?v=..."
+                        autocomplete="off">
+                </div>
+                <div class="form-group">
+                    <label for="videoDescriptionInput">Description <span class="optional-tag">(optional)</span></label>
+                    <textarea id="videoDescriptionInput" rows="3" placeholder="Short description…"></textarea>
+                </div>
+                <!-- Course is inherited from the selected course page. -->
+                <input type="hidden" id="videoCourseInput">
+                <div id="videoModalMessage" class="modal-message"></div>
+            </div>
+            <div class="modal-footer">
+                <button id="cancelVideoModal" class="secondary-btn">Cancel</button>
+                <button id="saveVideoBtn" class="primary-btn">Save Video</button>
+            </div>
+        </div>
+    </div>
+
+
+    <!-- ===================================================
+     QUESTION EDITOR MODAL
+=================================================== -->
+    <div id="questionModal" class="modal-overlay" style="display:none;">
+        <div class="modal-box ve-q-modal-box">
+            <div class="modal-header">
+                <h2 id="questionModalTitle">Add Question</h2>
+                <button id="closeQuestionModal" class="modal-close">&times;</button>
+            </div>
+            <div class="modal-body">
+                <input type="hidden" id="qEditId">
+
+                <!-- Timestamp -->
+                <div class="form-group">
+                    <div class="ve-label-row">
+                        <label for="qTimestamp">Trigger Timestamp (mm:ss or seconds)</label>
+                        <button type="button" id="btnSyncTime" class="ve-link-btn">Use current time (<span
+                                id="syncCurrentTime">00:00</span>)</button>
+                    </div>
+                    <input type="text" id="qTimestamp" placeholder="e.g. 02:30 or 150">
+                    <small id="qTimestampHint" class="ve-hint">Will trigger at 00:00</small>
+                </div>
+
+                <!-- Question text -->
+                <div class="form-group">
+                    <label for="qText">Question</label>
+                    <textarea id="qText" rows="2" placeholder="What is the main concept here?"></textarea>
+                </div>
+
+                <!-- Options -->
+                <div class="form-group">
+                    <label>Answer Options <small class="optional-tag">(select the correct one)</small></label>
+                    <div class="ve-options-list">
+                        <div class="ve-option-row">
+                            <input type="radio" name="qCorrect" id="optRadio0" value="0" checked>
+                            <span class="ve-opt-letter">A</span>
+                            <input type="text" id="qOpt0" placeholder="Option A">
+                        </div>
+                        <div class="ve-option-row">
+                            <input type="radio" name="qCorrect" id="optRadio1" value="1">
+                            <span class="ve-opt-letter">B</span>
+                            <input type="text" id="qOpt1" placeholder="Option B">
+                        </div>
+                        <div class="ve-option-row">
+                            <input type="radio" name="qCorrect" id="optRadio2" value="2">
+                            <span class="ve-opt-letter">C</span>
+                            <input type="text" id="qOpt2" placeholder="Option C">
+                        </div>
+                        <div class="ve-option-row">
+                            <input type="radio" name="qCorrect" id="optRadio3" value="3">
+                            <span class="ve-opt-letter">D</span>
+                            <input type="text" id="qOpt3" placeholder="Option D">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Explanation -->
+                <div class="form-group">
+                    <label for="qExplanation">Explanation <span class="optional-tag">(shown after correct
+                            answer)</span></label>
+                    <input type="text" id="qExplanation" placeholder="Brief explanation of the correct answer">
+                </div>
+
+                <!-- Error banner -->
+                <div id="qModalError" class="ve-modal-error hidden"></div>
+            </div>
+            <div class="modal-footer">
+                <button id="cancelQuestionModal" class="secondary-btn">Cancel</button>
+                <button id="saveQuestionBtn" class="primary-btn">Save Question</button>
+            </div>
+        </div>
+    </div>
+
+
+    <!-- YouTube IFrame API -->
+    <script src="https://www.youtube.com/iframe_api"></script>
+    <!-- Supabase -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="supabase-config.js"></script>
+    <script src="icons.js"></script>
+    <script src="sidebar-mobile.js"></script>
+    <!-- App -->
+    <script src="videos.js"></script>
+
+</body>
+
+</html>

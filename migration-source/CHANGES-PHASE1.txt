@@ -1,0 +1,30 @@
+EduLearn Phase 1 - what changed
+================================
+ORDER: 1) back up  2) run sql/10_phase1_integrity_and_moves.sql (STEP 0 checks first)  3) deploy these files.
+
+index.html
+  - Students table: checkbox column, "Show archived", "Archive Selected", "Delete Selected (n)"
+  - Student History modal (enrollments, movements, Undo last move)
+  - Move Students modal: optional Reason field
+app.js
+  - loadStudents(): no longer selects password_hash; loads students.status
+  - renderStudents(): archived students hidden unless "Show archived"; History / Archive / Delete buttons
+  - deleteStudent(): now calls RPC delete_students and reports "Nothing was deleted..." when 0 rows
+  - NEW bulk delete, archive/restore, student history, undo last move
+  - moveStudents(): now calls RPC move_students (records promote/demote, reason, admin, per-student problems)
+  - NEW getAdminCreds()/callAdminRpc(): admin password kept in memory after login; if the session was
+    restored from localStorage the app asks for the password once (window.prompt). Interim until A4.
+sql/10_phase1_integrity_and_moves.sql   database side (unchanged from previous message)
+NOT changed yet: academic.*, courses.*, videos.*, style.css, supabase-config.js, sections A4 and B.
+
+Update: Move Students now has a Batch filter (index.html #moveBatch, app.js populateMoveBatchSelect/moveBatchText).
+  The batch is applied to the student count, the confirmation text and the list of students actually moved.
+
+
+STUDENT SEMESTER FIELD UPDATE (2026-10-03)
+- Added students.semester_id as FK to semesters.
+- Existing values are backfilled from current student_enrollments.
+- Admin/student code now uses students.semester_id for current semester display/filtering.
+- Move Students synchronizes students.semester_id with the target enrollment.
+- Added sql/32_add_students_semester_id.sql for databases where Phase 1 was already run.
+- Fixed duplicate new_def declaration in 10_phase1_integrity_and_moves.sql.

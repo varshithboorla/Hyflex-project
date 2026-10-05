@@ -1,0 +1,45 @@
+EduLearn – Permanent Video + Question Progress History
+
+What changed
+------------
+1. Added one table: public.student_progress_history.
+   - record_type = 'video' stores a complete video snapshot.
+   - record_type = 'question' stores each question attempt.
+2. When Move Students moves a student forward, the current semester is frozen
+   into this table before current progress is cleared.
+3. Video history contains a row for every published video assigned to the
+   student, including Not Started videos, so the old-semester report is complete.
+4. Question attempts are stored in the same table and are never restored.
+5. The target semester starts with clean current video/question progress.
+6. Backward semester movement is refused by the move_students RPC.
+7. The old undo_last_move RPC is removed by the new SQL migration.
+8. Admin > Video Progress now has a Progress History view showing the permanent
+   old-semester video report and aggregated question-attempt information.
+
+Supabase
+--------
+Run these SQL files in order:
+  sql/10_phase1_integrity_and_moves.sql
+  sql/20_semester_folders_and_batches.sql
+  sql/30_progress_history_no_restore.sql
+
+The third file is the important migration for this feature. It replaces the
+move_students workflow, creates the single history table, removes the undo RPC,
+and creates the permanent history report RPC.
+
+Example
+-------
+Sem 3 -> Sem 4:
+  - Sem 3 video progress is stored permanently.
+  - Sem 3 question attempts are stored permanently in the same table.
+  - Current progress/attempts are cleared.
+  - Student becomes current in Sem 4.
+  - Sem 4 starts with fresh progress.
+
+Sem 4 -> Sem 5:
+  - Sem 4 is stored in the same table.
+  - Sem 3 remains untouched.
+  - Sem 4 data is never restored into Sem 5.
+
+Sem 4 -> Sem 3:
+  - Refused. The workflow is forward-only.

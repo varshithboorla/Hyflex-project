@@ -1,0 +1,15 @@
+EduLearn DSAPath visual theme update
+
+Changed:
+- Fraunces display font + IBM Plex Sans body font
+- Paper / raised paper / sunken paper palette
+- Ink + muted ink text system
+- #2c6156 green accent
+- Hairline borders and minimal shadows
+- Updated sidebar, topbars, cards, tables, forms, modals, course UI
+- Updated video editor/player/question/skip UI to use the same system
+- Responsive behavior retained
+
+Application logic, Supabase queries, IDs, and JavaScript were kept unchanged.
+Run with: python -m http.server 5500
+Open: http://localhost:5500/index.html

@@ -1,0 +1,30 @@
+STUDENT SEMESTER UPDATE
+=======================
+
+students now contains:
+  semester_id integer NOT NULL REFERENCES public.semesters(id)
+
+The project uses students.semester_id as the direct current-semester field.
+student_enrollments is still retained for academic-year context, enrollment
+history, promotion history, and permanent progress-history snapshots.
+
+SQL order for an existing database:
+1. sql/10_phase1_integrity_and_moves.sql
+2. sql/20_semester_folders_and_batches.sql
+3. sql/30_progress_history_no_restore.sql
+4. sql/31_fix_progress_history_rpc_schema_cache.sql (only if the RPC schema cache is stale)
+
+If 10 has already been run successfully before this update, run:
+  sql/32_add_students_semester_id.sql
+before using the updated application.
+
+Existing students.semester_id values are backfilled from their current
+student_enrollments row. The migration stops if any student has no current
+enrollment, because a semester cannot be safely guessed.
+
+The Move Students RPC updates both:
+  student_enrollments.semester_id
+  students.semester_id
+
+Student login/profile and the admin student list now read the current
+semester directly from students.semester_id.

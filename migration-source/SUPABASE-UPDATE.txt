@@ -1,0 +1,56 @@
+EduLearn - update for the new Supabase structure
+=================================================
+
+Students now see courses through academic relationships, not folders:
+
+  student -> batch -> regulation
+  student -> branch
+  student -> current enrollment -> academic year + semester
+  course offering = course + academic year + regulation + semester (+ branches)
+
+Folders are only an admin way to organise courses.
+
+ORDER OF WORK
+-------------
+1. Back up Supabase, then run  sql/01_migrate.sql  (edit the two "EDIT" lines first).
+2. Run the VERIFY queries at the bottom of that file.
+3. Deploy this project (all files in this zip).
+4. Test: admin pages, add a course, add a student, log in as a student.
+5. Only then run  sql/02_cleanup.sql  (drops the old columns / tables).
+
+WHAT CHANGED
+------------
+academic.html / academic.js   NEW  - Academic Setup: academic years (mark one as
+                                     current), regulations, batches.
+courses.html / courses.js     Each card is now a course OFFERING. The Add/Edit
+                                     form has Academic Year, Regulation, Semester,
+                                     Branches, Folder and "Visible to students".
+                                     Filters added for academic year + regulation.
+                                     Delete removes the offering with its videos,
+                                     questions and student progress.
+videos.html / videos.js       Opened with videos.html?offering_id=<id>. Videos are
+                                     stored against offering_id. Heading shows
+                                     "Course - year - regulation - semester".
+app.js / index.html           Students have a batch; the semester comes from the
+                                     current row in student_enrollments.
+                                     * Add/Edit student: new Batch field (auto-picked
+                                       from the semester when left empty).
+                                     * Students table: Batch column + Batch filter.
+                                     * Move Students: pick the academic year too. The old
+                                       enrollment is closed (history kept) and a new
+                                       one is created.
+                                     * Excel upload: optional "batch" column
+                                       (e.g. 2025-2029). Empty = worked out from the
+                                       semester and current academic year.
+                                     * Student portal: shows batch, regulation,
+                                       academic year and "My Courses" (from the
+                                       v_student_courses view).
+style.css, supabase-config.js  unchanged.
+
+THINGS TO KNOW
+--------------
+* "All Branches" now saves one row per branch that exists at that moment. If you add
+  a new branch later, open the course and save it again to include it.
+* Editing a course's name or folder only affects that offering; if other years use
+  the same course they keep the old name/folder.
+* Run locally:  python -m http.server 5500   then open http://localhost:5500/index.html
