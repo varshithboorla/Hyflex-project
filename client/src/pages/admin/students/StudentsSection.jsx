@@ -42,7 +42,7 @@ export default function StudentsSection() {
   const load = async () => {
     setLoading(true); setError('');
     try {
-      const data = await adminApi.students({ ...filters, search });
+      const data = await adminApi.getStudents({ ...filters, search });
       setStudents(data.students || []);
       setOptions(data.options || { academicYears: [], semesters: [], branches: [], batches: [] });
       setSelected(new Set());

@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { ArrowDown, ArrowLeft, ArrowUp, CalendarDays, ChevronRight, Edit3, Eye, Loader2, Plus, Save, Search, Settings2, SkipForward, Trash2, X } from 'lucide-react';
-import { adminApi } from '../../lib/api';
+import { videosApi } from '../../lib/api';
 import { useNavigate } from 'react-router-dom';
 
 const ytId = (url='') => { const m=url.match(/(?:youtu\.be\/|youtube\.com\/(?:watch\?v=|embed\/|shorts\/))([\w-]{11})/); return m?.[1] || ''; };
@@ -11,16 +11,16 @@ export default function VideosPage(){
  const navigate=useNavigate();
  const [offerings,setOfferings]=useState([]),[selectedOffering,setSelectedOffering]=useState(''),[videos,setVideos]=useState([]),[loading,setLoading]=useState(true),[search,setSearch]=useState(''),[message,setMessage]=useState(null),[videoModal,setVideoModal]=useState(null),[editor,setEditor]=useState(null),[editorTab,setEditorTab]=useState('questions'),[qModal,setQModal]=useState(null);
  const notify=(type,text)=>{setMessage({type,text});setTimeout(()=>setMessage(null),3500)};
- const loadOfferings=async()=>{try{const r=await adminApi.courseOfferings();setOfferings(r.offerings||[]); if(!selectedOffering&&r.offerings?.[0]) setSelectedOffering(String(r.offerings[0].id));}catch(e){notify('error',e.message)}};
- const loadVideos=async(id=selectedOffering)=>{if(!id){setVideos([]);setLoading(false);return} setLoading(true);try{const r=await adminApi.videos({offering_id:id});setVideos(r.videos||[])}catch(e){notify('error',e.message)}finally{setLoading(false)}};
+ const loadOfferings=async()=>{try{const r=await videosApi.getOfferings();setOfferings(r.offerings||[]); if(!selectedOffering&&r.offerings?.[0]) setSelectedOffering(String(r.offerings[0].id));}catch(e){notify('error',e.message)}};
+ const loadVideos=async(id=selectedOffering)=>{if(!id){setVideos([]);setLoading(false);return} setLoading(true);try{const r=await videosApi.getVideos({offering_id:id});setVideos(r.videos||[])}catch(e){notify('error',e.message)}finally{setLoading(false)}};
  useEffect(()=>{loadOfferings()},[]); useEffect(()=>{loadVideos()},[selectedOffering]);
  const offering=offerings.find(o=>String(o.id)===String(selectedOffering));
  const visible=useMemo(()=>videos.filter(v=>!search||v.video_title.toLowerCase().includes(search.toLowerCase())),[videos,search]);
- const saveVideo=async payload=>{try{if(videoModal?.mode==='edit') await adminApi.updateVideo(videoModal.video.video_id,payload); else await adminApi.createVideo(payload); setVideoModal(null);await loadVideos();notify('success',videoModal?.mode==='edit'?'Video updated.':'Video added.')}catch(e){notify('error',e.message)}};
- const openEditor=async v=>{try{const r=await adminApi.videoEditor(v.video_id);setEditor({...r,questions:(r.questions||[]).map(q=>({dbId:q.question_id,time:q.timestamp_seconds,question:q.question_text,explanation:q.explanation||'',options:(q.question_options||[]).sort((a,b)=>a.option_order-b.option_order).map(x=>x.option_text),correctAnswer:Math.max(0,(q.question_options||[]).sort((a,b)=>a.option_order-b.option_order).findIndex(x=>x.is_correct))})),skips:(r.skips||[]).map(s=>({dbId:s.skip_id,start:s.start_time_seconds,end:s.end_time_seconds}))});setEditorTab('questions')}catch(e){notify('error',e.message)}};
- const saveEditor=async()=>{try{await adminApi.saveVideoEditor(editor.video.video_id,{...editor.video,questions:editor.questions,skips:editor.skips});setEditor(null);await loadVideos();notify('success','Video editor saved.')}catch(e){notify('error',e.message)}};
- const deleteVideo=async v=>{if(!confirm(`Delete "${v.video_title}"? All questions and skips will also be removed.`))return;try{await adminApi.deleteVideo(v.video_id);await loadVideos();notify('success','Video deleted.')}catch(e){notify('error',e.message)}};
- const move=async(v,d)=>{try{await adminApi.moveVideo(v.video_id,d);await loadVideos()}catch(e){notify('error',e.message)}};
+ const saveVideo=async payload=>{try{if(videoModal?.mode==='edit') await videosApi.updateVideo(videoModal.video.video_id,payload); else await videosApi.createVideo(payload); setVideoModal(null);await loadVideos();notify('success',videoModal?.mode==='edit'?'Video updated.':'Video added.')}catch(e){notify('error',e.message)}};
+ const openEditor=async v=>{try{const r=await videosApi.getEditor(v.video_id);setEditor({...r,questions:(r.questions||[]).map(q=>({dbId:q.question_id,time:q.timestamp_seconds,question:q.question_text,explanation:q.explanation||'',options:(q.question_options||[]).sort((a,b)=>a.option_order-b.option_order).map(x=>x.option_text),correctAnswer:Math.max(0,(q.question_options||[]).sort((a,b)=>a.option_order-b.option_order).findIndex(x=>x.is_correct))})),skips:(r.skips||[]).map(s=>({dbId:s.skip_id,start:s.start_time_seconds,end:s.end_time_seconds}))});setEditorTab('questions')}catch(e){notify('error',e.message)}};
+ const saveEditor=async()=>{try{await videosApi.saveEditor(editor.video.video_id,{...editor.video,questions:editor.questions,skips:editor.skips});setEditor(null);await loadVideos();notify('success','Video editor saved.')}catch(e){notify('error',e.message)}};
+ const deleteVideo=async v=>{if(!confirm(`Delete "${v.video_title}"? All questions and skips will also be removed.`))return;try{await videosApi.deleteVideo(v.video_id);await loadVideos();notify('success','Video deleted.')}catch(e){notify('error',e.message)}};
+ const move=async(v,d)=>{try{await videosApi.moveVideo(v.video_id,d);await loadVideos()}catch(e){notify('error',e.message)}};
  if(editor) return <Editor editor={editor} setEditor={setEditor} tab={editorTab} setTab={setEditorTab} qModal={qModal} setQModal={setQModal} onSave={saveEditor} />;
  return <section className="space-y-6">
   {message&&<div className={`rounded-xl border px-4 py-3 text-sm ${message.type==='error'?'border-red-200 bg-red-50 text-red-700':'border-emerald-200 bg-emerald-50 text-emerald-700'}`}>{message.text}</div>}

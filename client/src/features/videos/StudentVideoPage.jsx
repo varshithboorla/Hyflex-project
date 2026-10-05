@@ -10,16 +10,16 @@ export default function StudentVideoPage(){
  const [speed,setSpeed]=useState(1),[question,setQuestion]=useState(null),[selected,setSelected]=useState(''),[explanation,setExplanation]=useState(''),[saving,setSaving]=useState(false),[courseVideos,setCourseVideos]=useState([]);
  const playerRef=useRef(null), fullscreenRef=useRef(null), tickRef=useRef(null), maxRef=useRef(0), seekingRef=useRef(false), answeredRef=useRef(new Set()), questionRef=useRef(null), durationRef=useRef(0);
  const courseId=location.state?.courseId;
- useEffect(()=>{let live=true; setLoading(true);studentApi.video(videoId).then(d=>{if(!live)return;setData(d); const p=d.progress; const m=Number(p?.max_watched_seconds||0);maxRef.current=m;setMaxWatched(m);answeredRef.current=new Set((d.attempts||[]).map(a=>Number(a.question_id))); setSpeed(Number(d.video.playback_speed||1)); questionRef.current=null;}).catch(e=>setError(e.message)).finally(()=>live&&setLoading(false));return()=>{live=false}},[videoId]);
+ useEffect(()=>{let live=true; setLoading(true);studentApi.getVideo(videoId).then(d=>{if(!live)return;setData(d); const p=d.progress; const m=Number(p?.max_watched_seconds||0);maxRef.current=m;setMaxWatched(m);answeredRef.current=new Set((d.attempts||[]).map(a=>Number(a.question_id))); setSpeed(Number(d.video.playback_speed||1)); questionRef.current=null;}).catch(e=>setError(e.message)).finally(()=>live&&setLoading(false));return()=>{live=false}},[videoId]);
 
- useEffect(()=>{ if(!courseId) return; studentApi.videos(courseId).then(r=>setCourseVideos(r.videos||[])).catch(()=>{}); },[courseId]);
+ useEffect(()=>{ if(!courseId) return; studentApi.getCourseVideos(courseId).then(r=>setCourseVideos(r.videos||[])).catch(()=>{}); },[courseId]);
 
  const saveProgress=useCallback(async(force=false)=>{
    if(!data||!playerRef.current)return;
    const totalQ=data.questions.length; const solved=answeredRef.current.size; const correct=(data.attempts||[]).filter(a=>a.is_correct).length;
    const done=duration>0 && maxRef.current>=Math.max(0,duration-2) && solved>=totalQ;
    if(!force && maxRef.current<=Number(data.progress?.max_watched_seconds||0)+1 && !done)return;
-   try{await studentApi.saveProgress(videoId,{max_watched_seconds:Math.floor(maxRef.current),questions_solved:solved,total_questions:totalQ,correct_answers:correct,completed:done});}catch(e){console.error(e)}
+   try{await studentApi.saveVideoProgress(videoId,{max_watched_seconds:Math.floor(maxRef.current),questions_solved:solved,total_questions:totalQ,correct_answers:correct,completed:done});}catch(e){console.error(e)}
  },[data,duration,videoId]);
  useEffect(()=>{ questionRef.current=question; },[question]);
  useEffect(()=>{ durationRef.current=duration; },[duration]);
@@ -50,7 +50,7 @@ export default function StudentVideoPage(){
    return()=>{clearInterval(tickRef.current);try{playerRef.current?.destroy()}catch{}playerRef.current=null};
  },[data,videoId]); // initialize once per selected video
 
- const submit=async()=>{if(!question||!selected||saving)return; const option=(question.question_options||[]).find(o=>String(o.option_id)===String(selected)); if(!option)return;setSaving(true);try{await studentApi.saveAttempt(videoId,{question_id:question.question_id,selected_option_id:option.option_id,is_correct:!!option.is_correct});answeredRef.current.add(Number(question.question_id));setData(prev=>({...prev,attempts:[...(prev.attempts||[]).filter(a=>Number(a.question_id)!==Number(question.question_id)),{question_id:question.question_id,is_correct:!!option.is_correct}]}));setExplanation(option.is_correct?(question.explanation||'Correct answer.'):(question.explanation||'Incorrect answer.'));setTimeout(()=>{questionRef.current=null;setQuestion(null);setExplanation('');playerRef.current?.playVideo?.();saveProgressRef.current(true)},1100)}catch(e){setExplanation(e.message)}finally{setSaving(false)}};
+ const submit=async()=>{if(!question||!selected||saving)return; const option=(question.question_options||[]).find(o=>String(o.option_id)===String(selected)); if(!option)return;setSaving(true);try{await studentApi.submitQuestion(videoId,{question_id:question.question_id,selected_option_id:option.option_id,is_correct:!!option.is_correct});answeredRef.current.add(Number(question.question_id));setData(prev=>({...prev,attempts:[...(prev.attempts||[]).filter(a=>Number(a.question_id)!==Number(question.question_id)),{question_id:question.question_id,is_correct:!!option.is_correct}]}));setExplanation(option.is_correct?(question.explanation||'Correct answer.'):(question.explanation||'Incorrect answer.'));setTimeout(()=>{questionRef.current=null;setQuestion(null);setExplanation('');playerRef.current?.playVideo?.();saveProgressRef.current(true)},1100)}catch(e){setExplanation(e.message)}finally{setSaving(false)}};
  const rewatch=()=>{const t=Math.max(0,time-15);seekingRef.current=true;playerRef.current?.seekTo(t,true);playerRef.current?.playVideo();questionRef.current=null;setQuestion(null);setExplanation('');setTimeout(()=>seekingRef.current=false,400)};
  const togglePlay=()=>{const p=playerRef.current;if(!p)return;playing?p.pauseVideo():p.playVideo()};
  const seek=e=>{const requested=Number(e.target.value); if(data?.video?.block_forward_seek && requested>maxRef.current){e.target.value=String(Math.floor(maxRef.current));return} seekingRef.current=true;playerRef.current?.seekTo(requested,true);setTimeout(()=>seekingRef.current=false,250)};

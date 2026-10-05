@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Download, FileSpreadsheet, Search, X, Users, RefreshCw, Printer, Filter } from 'lucide-react';
 import PageHeader from '../../components/ui/PageHeader';
-import { adminApi } from '../../lib/api';
+import { progressApi } from '../../lib/api';
 
 const statusOf = p => p?.completed ? 'completed' : ((Number(p?.max_watched_seconds) || 0) > 0 || (Number(p?.questions_solved) || 0) > 0) ? 'in_progress' : 'not_started';
 const statusLabel = s => s === 'completed' ? 'Completed' : s === 'in_progress' ? 'In Progress' : 'Not Started';
@@ -39,7 +39,7 @@ export default function ProgressPage(){
   const [selected,setSelected]=useState(null), [studentSearch,setStudentSearch]=useState('');
   const [branch,setBranch]=useState(''), [batch,setBatch]=useState(''), [year,setYear]=useState(''), [semester,setSemester]=useState(''), [status,setStatus]=useState('');
 
-  const load=async()=>{setLoading(true);setError('');try{setData(await adminApi.progress())}catch(e){setError(e.message||'Unable to load progress.')}finally{setLoading(false)}};
+  const load=async()=>{setLoading(true);setError('');try{setData(await progressApi.getProgress())}catch(e){setError(e.message||'Unable to load progress.')}finally{setLoading(false)}};
   useEffect(()=>{load()},[]);
 
   const progressMap=useMemo(()=>new Map((data?.progress||[]).map(p=>[`${p.student_id}:${p.video_id}`,p])),[data]);

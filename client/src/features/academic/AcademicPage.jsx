@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import PageHeader from '../../components/ui/PageHeader';
-import { adminApi } from '../../lib/api';
+import { academicApi } from '../../lib/api';
 
 const emptyYear = { label: '', start_date: '', end_date: '', is_current: false };
 const emptyRegulation = { code: '', name: '' };
@@ -59,7 +59,7 @@ export default function AcademicPage() {
   const load = async () => {
     setLoading(true);
     setError('');
-    try { setData(await adminApi.academic()); }
+    try { setData(await academicApi.getSetup()); }
     catch (e) { setError(e.message || 'Unable to load academic setup.'); }
     finally { setLoading(false); }
   };
@@ -82,11 +82,11 @@ export default function AcademicPage() {
   const save = async () => {
     setSaving(true); setError('');
     try {
-      if (modal === 'year') await adminApi.createAcademicYear(yearForm);
-      if (modal === 'regulation') await adminApi.createRegulation(regForm);
+      if (modal === 'year') await academicApi.createAcademicYear(yearForm);
+      if (modal === 'regulation') await academicApi.createRegulation(regForm);
       if (modal === 'batch') {
-        if (editingBatch) await adminApi.updateBatchRegulation(editingBatch.id, Number(batchForm.regulation_id));
-        else await adminApi.createBatch({ admission_year: Number(batchForm.admission_year), duration: Number(batchForm.duration), regulation_id: Number(batchForm.regulation_id) });
+        if (editingBatch) await academicApi.updateBatch(editingBatch.id, { regulation_id: Number(batchForm.regulation_id) });
+        else await academicApi.createBatch({ admission_year: Number(batchForm.admission_year), duration: Number(batchForm.duration), regulation_id: Number(batchForm.regulation_id) });
       }
       setModal(null); await load();
     } catch (e) { setError(e.message || 'Unable to save.'); }
@@ -95,20 +95,20 @@ export default function AcademicPage() {
 
   const setCurrent = async (year) => {
     if (!window.confirm(`Make ${year.label} the current academic year?`)) return;
-    try { await adminApi.setCurrentAcademicYear(year.id); await load(); } catch (e) { setError(e.message); }
+    try { await academicApi.setCurrentAcademicYear(year.id); await load(); } catch (e) { setError(e.message); }
   };
 
   const removeYear = async (year) => {
     if (!window.confirm(`Delete the academic year ${year.label}?`)) return;
-    try { await adminApi.deleteAcademicYear(year.id); await load(); } catch (e) { setError(e.message); }
+    try { await academicApi.deleteAcademicYear(year.id); await load(); } catch (e) { setError(e.message); }
   };
   const removeReg = async (reg) => {
     if (!window.confirm(`Delete the regulation ${reg.code}?`)) return;
-    try { await adminApi.deleteRegulation(reg.id); await load(); } catch (e) { setError(e.message); }
+    try { await academicApi.deleteRegulation(reg.id); await load(); } catch (e) { setError(e.message); }
   };
   const removeBatch = async (batch) => {
     if (!window.confirm(`Delete the batch ${batch.label}?`)) return;
-    try { await adminApi.deleteBatch(batch.id); await load(); } catch (e) { setError(e.message); }
+    try { await academicApi.deleteBatch(batch.id); await load(); } catch (e) { setError(e.message); }
   };
 
   return <section>

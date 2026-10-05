@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Download, Printer, RefreshCw, Search, X, History as HistoryIcon } from 'lucide-react';
 import PageHeader from '../../components/ui/PageHeader';
-import { adminApi } from '../../lib/api';
+import { historyApi } from '../../lib/api';
 
 const formatTime = (seconds) => {
   const total = Math.max(0, Math.floor(Number(seconds) || 0));
@@ -38,7 +38,7 @@ export default function HistoryPage() {
     setLoading(true);
     setError('');
     try {
-      const result = await adminApi.progressHistory();
+      const result = await historyApi.getHistory();
       setRows(Array.isArray(result.rows) ? result.rows : []);
     } catch (err) {
       setRows([]);

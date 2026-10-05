@@ -8,7 +8,7 @@ export default function StudentHomePage() {
   const [error, setError] = useState('');
 
   useEffect(() => {
-    Promise.all([studentApi.profile(), studentApi.courses()])
+    Promise.all([studentApi.getProfile(), studentApi.getCourses()])
       .then(([profile, courseData]) => { setData(profile); setCourses(courseData.courses || []); })
       .catch(e => setError(e.message || 'Unable to load student profile.'))
       .finally(() => setLoading(false));

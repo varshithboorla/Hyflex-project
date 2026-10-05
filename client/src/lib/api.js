@@ -176,8 +176,14 @@ export const dashboardApi = {
    ========================================================= */
 
 export const academicApi = {
-  getAcademicYears: () =>
-    api('/api/admin/academic/years'),
+  // The current backend exposes all academic setup data through /academic.
+  getSetup: () =>
+    api('/api/admin/academic'),
+
+  getAcademicYears: async () => {
+    const data = await academicApi.getSetup();
+    return data?.academicYears || [];
+  },
 
   createAcademicYear: (payload) =>
     api('/api/admin/academic/years', {
@@ -185,10 +191,9 @@ export const academicApi = {
       body: payload,
     }),
 
-  updateAcademicYear: (id, payload) =>
-    api(`/api/admin/academic/years/${id}`, {
-      method: 'PATCH',
-      body: payload,
+  setCurrentAcademicYear: (id) =>
+    api(`/api/admin/academic/years/${id}/current`, {
+      method: 'POST',
     }),
 
   deleteAcademicYear: (id) =>
@@ -196,18 +201,14 @@ export const academicApi = {
       method: 'DELETE',
     }),
 
-  getRegulations: () =>
-    api('/api/admin/academic/regulations'),
+  getRegulations: async () => {
+    const data = await academicApi.getSetup();
+    return data?.regulations || [];
+  },
 
   createRegulation: (payload) =>
     api('/api/admin/academic/regulations', {
       method: 'POST',
-      body: payload,
-    }),
-
-  updateRegulation: (id, payload) =>
-    api(`/api/admin/academic/regulations/${id}`, {
-      method: 'PATCH',
       body: payload,
     }),
 
@@ -216,8 +217,10 @@ export const academicApi = {
       method: 'DELETE',
     }),
 
-  getBatches: () =>
-    api('/api/admin/academic/batches'),
+  getBatches: async () => {
+    const data = await academicApi.getSetup();
+    return data?.batches || [];
+  },
 
   createBatch: (payload) =>
     api('/api/admin/academic/batches', {
@@ -226,7 +229,7 @@ export const academicApi = {
     }),
 
   updateBatch: (id, payload) =>
-    api(`/api/admin/academic/batches/${id}`, {
+    api(`/api/admin/academic/batches/${id}/regulation`, {
       method: 'PATCH',
       body: payload,
     }),
@@ -236,11 +239,17 @@ export const academicApi = {
       method: 'DELETE',
     }),
 
-  getSemesters: () =>
-    api('/api/admin/academic/semesters'),
+  // Semesters and branches are returned by the courses metadata endpoint
+  // in the current backend.
+  getSemesters: async () => {
+    const data = await api('/api/admin/courses/meta');
+    return data?.semesters || [];
+  },
 
-  getBranches: () =>
-    api('/api/admin/academic/branches'),
+  getBranches: async () => {
+    const data = await api('/api/admin/courses/meta');
+    return data?.branches || [];
+  },
 };
 
 
@@ -249,7 +258,38 @@ export const academicApi = {
    ========================================================= */
 
 export const coursesApi = {
-  getCourses: (params = {}) => {
+  // The backend currently manages courses through course_offerings.
+  getCourses: async (params = {}) => {
+    const data = await coursesApi.getOfferings(params);
+    return data?.offerings || [];
+  },
+
+  getCourse: async (id) => {
+    const data = await coursesApi.getOfferings();
+    const offering = (data?.offerings || []).find(
+      (item) => String(item.id) === String(id)
+    );
+    return { offering };
+  },
+
+  createCourse: (payload) =>
+    api('/api/admin/courses/offerings', {
+      method: 'POST',
+      body: payload,
+    }),
+
+  updateCourse: (id, payload) =>
+    api(`/api/admin/courses/offerings/${id}`, {
+      method: 'PATCH',
+      body: payload,
+    }),
+
+  deleteCourse: (id) =>
+    api(`/api/admin/courses/offerings/${id}`, {
+      method: 'DELETE',
+    }),
+
+  getOfferings: (params = {}) => {
     const query = new URLSearchParams();
 
     Object.entries(params).forEach(([key, value]) => {
@@ -265,45 +305,29 @@ export const coursesApi = {
     const queryString = query.toString();
 
     return api(
-      `/api/admin/courses${queryString ? `?${queryString}` : ''}`
+      `/api/admin/courses/offerings${queryString ? `?${queryString}` : ''}`
     );
   },
 
-  getCourse: (id) =>
-    api(`/api/admin/courses/${id}`),
+  getFolders: async () => {
+    const data = await api('/api/admin/courses/meta');
+    return data?.folders || [];
+  },
 
-  createCourse: (payload) =>
-    api('/api/admin/courses', {
+  // The backend already exposes one combined metadata endpoint.
+  getMeta: () =>
+    api('/api/admin/courses/meta'),
+
+  syncFolders: () =>
+    api('/api/admin/courses/folders/sync', {
       method: 'POST',
-      body: payload,
     }),
 
-  updateCourse: (id, payload) =>
-    api(`/api/admin/courses/${id}`, {
+  updateFolder: (id, payload) =>
+    api(`/api/admin/courses/folders/${id}`, {
       method: 'PATCH',
       body: payload,
     }),
-
-  deleteCourse: (id) =>
-    api(`/api/admin/courses/${id}`, {
-      method: 'DELETE',
-    }),
-
-  getOfferings: (params = {}) => {
-    const query = new URLSearchParams(params).toString();
-
-    return api(
-      `/api/admin/courses/offerings${query ? `?${query}` : ''}`
-    );
-  },
-
-  getFolders: (params = {}) => {
-    const query = new URLSearchParams(params).toString();
-
-    return api(
-      `/api/admin/courses/folders${query ? `?${query}` : ''}`
-    );
-  },
 };
 
 
@@ -367,6 +391,29 @@ export const videosApi = {
   deleteQuestion: (questionId) =>
     api(`/api/admin/videos/questions/${questionId}`, {
       method: 'DELETE',
+    }),
+
+  // The video-management page uses course offerings as its selector.
+  getOfferings: (params = {}) => {
+    const query = new URLSearchParams(params).toString();
+    return api(
+      `/api/admin/courses/offerings${query ? `?${query}` : ''}`
+    );
+  },
+
+  getEditor: (videoId) =>
+    api(`/api/admin/videos/${videoId}/editor`),
+
+  saveEditor: (videoId, payload) =>
+    api(`/api/admin/videos/${videoId}/editor`, {
+      method: 'PATCH',
+      body: payload,
+    }),
+
+  moveVideo: (videoId, direction) =>
+    api(`/api/admin/videos/${videoId}/move`, {
+      method: 'POST',
+      body: { direction },
     }),
 };
 
@@ -441,12 +488,12 @@ export const historyApi = {
     const queryString = query.toString();
 
     return api(
-      `/api/admin/history${queryString ? `?${queryString}` : ''}`
+      `/api/admin/progress/history${queryString ? `?${queryString}` : ''}`
     );
   },
 
   getStudentHistory: (studentId) =>
-    api(`/api/admin/history/student/${studentId}`),
+    api(`/api/admin/progress/student/${studentId}`),
 };
 
 

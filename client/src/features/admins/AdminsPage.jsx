@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Pencil, Plus, RefreshCw, Search, Trash2, X } from 'lucide-react';
 import PageHeader from '../../components/ui/PageHeader';
-import { adminApi, authApi } from '../../lib/api';
+import { adminsApi, authApi } from '../../lib/api';
 
 export default function AdminsPage() {
   const [admins, setAdmins] = useState([]);
@@ -17,7 +17,7 @@ export default function AdminsPage() {
 
   const load = async () => {
     setLoading(true); setError('');
-    try { setAdmins(await adminApi.admins()); }
+    try { setAdmins(await adminsApi.getAdmins()); }
     catch (e) { setError(e.message || 'Failed to load administrators.'); }
     finally { setLoading(false); }
   };
@@ -34,8 +34,8 @@ export default function AdminsPage() {
     if (!modal.id && !password) return setMessage('Password is required for a new admin.');
     setSaving(true);
     try {
-      if (modal.id) await adminApi.updateAdmin(modal.id, { email: email.trim(), password });
-      else await adminApi.createAdmin({ email: email.trim(), password });
+      if (modal.id) await adminsApi.updateAdmin(modal.id, { email: email.trim(), password });
+      else await adminsApi.createAdmin({ email: email.trim(), password });
       setModal(null); await load();
       if (modal.id && session?.id === modal.id) await authApi.me().then(r => setSession(r.user));
     } catch (e) { setMessage(e.message || 'Failed to save administrator.'); }
@@ -45,7 +45,7 @@ export default function AdminsPage() {
   const remove = async (a) => {
     if (session?.id === a.id) return alert('You cannot delete the administrator account you are currently logged in with.');
     if (!window.confirm(`Are you sure you want to delete admin "${a.email}"?`)) return;
-    try { await adminApi.deleteAdmin(a.id); await load(); }
+    try { await adminsApi.deleteAdmin(a.id); await load(); }
     catch (e) { alert(e.message || 'Failed to delete administrator.'); }
   };
 

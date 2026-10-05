@@ -16,14 +16,14 @@ export default function StudentCoursesPage() {
   const [error, setError] = useState('');
 
   useEffect(() => {
-    studentApi.profile().then(setProfile).catch(() => {});
-    studentApi.courses().then(r => setCourses(r.courses || [])).catch(e => setError(e.message)).finally(() => setLoading(false));
+    studentApi.getProfile().then(setProfile).catch(() => {});
+    studentApi.getCourses().then(r => setCourses(r.courses || [])).catch(e => setError(e.message)).finally(() => setLoading(false));
   }, []);
 
   useEffect(() => {
     if (!courseId) return;
     setLoading(true); setError('');
-    studentApi.videos(courseId).then(r => { setVideos(r.videos || []); setVideosProgress(r.progress || []); }).catch(e => setError(e.message)).finally(() => setLoading(false));
+    studentApi.getCourseVideos(courseId).then(r => { setVideos(r.videos || []); setVideosProgress(r.progress || []); }).catch(e => setError(e.message)).finally(() => setLoading(false));
   }, [courseId]);
 
   const filteredCourses = useMemo(() => courses.filter(c => `${c.course_name} ${c.course_code || ''}`.toLowerCase().includes(search.toLowerCase())), [courses, search]);
