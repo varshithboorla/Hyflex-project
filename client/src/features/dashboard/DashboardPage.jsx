@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Users, Building2, BookOpen, RefreshCw } from 'lucide-react';
-import { adminApi } from '../../lib/api';
+import { dashboardApi } from '../../lib/api';
 
 function StatCard({ icon: Icon, label, value }) {
   return <div className="flex items-center gap-4 rounded-xl border border-slate-200 bg-white p-5 shadow-[0_3px_14px_rgba(15,23,42,0.03)]">
@@ -16,7 +16,7 @@ export default function DashboardSection() {
 
   const load = async () => {
     setLoading(true); setError('');
-    try { setData(await adminApi.dashboard()); }
+    try { setData(await dashboardApi.getDashboard()); }
     catch (e) { setError(e.message || 'Unable to load dashboard data.'); }
     finally { setLoading(false); }
   };
