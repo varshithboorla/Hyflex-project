@@ -47,16 +47,45 @@ router.get('/courses', async (req,res)=>{
     const student=await currentStudent(req);
     if(!student?.enrollment) return res.json({courses:[], enrollment:null});
     const e=student.enrollment;
-    const result=await supabase.from('v_student_courses')
-      .select('student_id,offering_id,course_id,course_name,course_code,folder_id,batch_id,academic_year_id,semester_id')
-      .eq('student_id',student.id).eq('academic_year_id',e.academic_year_id).eq('semester_id',e.semester_id)
-      .order('course_name',{ascending:true});
-    if(result.error) throw result.error;
-    const unique=[...new Map((result.data||[]).map(x=>[Number(x.offering_id),x])).values()];
 
-    // Add student-visible video totals/status counts to each course.
-    // Only videos currently available by their start/end dates are counted.
-    const offeringIds=unique.map(c=>Number(c.offering_id));
+    // Build the student's courses directly from course_offerings.
+    // IMPORTANT: a video belongs to an offering, not merely to the generic course.
+    // Using the exact offering here prevents a video uploaded to Course A from
+    // appearing under Course B just because both offerings share the same course_id.
+    const [offeringsR, branchLinksR, coursesR] = await Promise.all([
+      supabase.from('course_offerings')
+        .select('id,course_id,academic_year_id,semester_id,batch_id,folder_id,is_published')
+        .eq('academic_year_id',e.academic_year_id)
+        .eq('semester_id',e.semester_id)
+        .eq('batch_id',student.batch_id)
+        .eq('is_published',true)
+        .order('id',{ascending:true}),
+      supabase.from('course_offering_branches').select('offering_id,branch_id'),
+      supabase.from('courses').select('course_id,course_name,course_code')
+    ]);
+    if(offeringsR.error) throw offeringsR.error;
+    if(branchLinksR.error) throw branchLinksR.error;
+    if(coursesR.error) throw coursesR.error;
+
+    const courseMap=new Map((coursesR.data||[]).map(c=>[Number(c.course_id),c]));
+    const allowedOfferingIds=new Set(
+      (branchLinksR.data||[])
+        .filter(x=>Number(x.branch_id)===Number(student.branch_id))
+        .map(x=>Number(x.offering_id))
+    );
+
+    const unique=(offeringsR.data||[])
+      .filter(o=>allowedOfferingIds.has(Number(o.id)))
+      .map(o=>({
+        ...o,
+        offering_id:o.id,
+        course_id:o.course_id,
+        ...(courseMap.get(Number(o.course_id))||{})
+      }));
+
+    // Add student-visible video totals/status counts to each exact offering.
+    // A video is counted only when videos.offering_id equals this offering id.
+    const offeringIds=unique.map(c=>Number(c.id));
     const today=new Date().toISOString().slice(0,10);
     let videoRows=[];
     if(offeringIds.length){
@@ -86,19 +115,15 @@ router.get('/courses', async (req,res)=>{
       const stats=statsByOffering.get(key)||{video_count:0,completed_count:0,in_progress_count:0,not_started_count:0};
       stats.video_count+=1;
       const p=progressByVideo.get(Number(v.video_id));
-      if(p?.completed){
-        stats.completed_count+=1;
-      }else if(p && (Number(p.max_watched_seconds||0)>0 || Number(p.questions_solved||0)>0)){
-        stats.in_progress_count+=1;
-      }else{
-        stats.not_started_count+=1;
-      }
+      if(p?.completed) stats.completed_count+=1;
+      else if(p && (Number(p.max_watched_seconds||0)>0 || Number(p.questions_solved||0)>0)) stats.in_progress_count+=1;
+      else stats.not_started_count+=1;
       statsByOffering.set(key,stats);
     }
 
     const courses=unique.map(c=>({
       ...c,
-      ...(statsByOffering.get(Number(c.offering_id))||{video_count:0,completed_count:0,in_progress_count:0,not_started_count:0})
+      ...(statsByOffering.get(Number(c.id))||{video_count:0,completed_count:0,in_progress_count:0,not_started_count:0})
     }));
     res.json({courses,enrollment:e});
   } catch(e){ console.error(e); res.status(500).json({message:e.message||'Unable to load courses.'});}
@@ -106,12 +131,30 @@ router.get('/courses', async (req,res)=>{
 
 async function hasCourseAccess(student, offeringId) {
   if(!student?.enrollment) return false;
-  const r=await supabase.from('v_student_courses').select('offering_id')
-    .eq('student_id',student.id).eq('offering_id',Number(offeringId))
+  const id=Number(offeringId);
+  if(!Number.isFinite(id)) return false;
+
+  // Access is checked against the exact course offering + current enrollment.
+  // The branch link is also required, so one offering cannot expose another
+  // offering's videos to a student merely because they share course_id.
+  const offering=await supabase.from('course_offerings')
+    .select('id,academic_year_id,semester_id,batch_id,is_published')
+    .eq('id',id)
     .eq('academic_year_id',student.enrollment.academic_year_id)
-    .eq('semester_id',student.enrollment.semester_id).maybeSingle();
-  if(r.error) throw r.error;
-  return !!r.data;
+    .eq('semester_id',student.enrollment.semester_id)
+    .eq('batch_id',student.batch_id)
+    .eq('is_published',true)
+    .maybeSingle();
+  if(offering.error) throw offering.error;
+  if(!offering.data) return false;
+
+  const branch=await supabase.from('course_offering_branches')
+    .select('offering_id')
+    .eq('offering_id',id)
+    .eq('branch_id',student.branch_id)
+    .maybeSingle();
+  if(branch.error) throw branch.error;
+  return !!branch.data;
 }
 
 router.get('/courses/:offeringId/videos', async(req,res)=>{

@@ -54,8 +54,8 @@ export async function api(path, options = {}) {
     const message =
       typeof data === 'object'
         ? data?.error ||
-          data?.message ||
-          `Request failed with status ${response.status}`
+        data?.message ||
+        `Request failed with status ${response.status}`
         : data || `Request failed with status ${response.status}`;
 
     const error = new Error(message);
@@ -459,8 +459,7 @@ export const progressApi = {
     const queryString = query.toString();
 
     return api(
-      `/api/admin/progress/student/${studentId}${
-        queryString ? `?${queryString}` : ''
+      `/api/admin/progress/student/${studentId}${queryString ? `?${queryString}` : ''
       }`
     );
   },
@@ -574,7 +573,7 @@ export const studentApi = {
 
   saveVideoProgress: (videoId, payload) =>
     api(`/api/student/videos/${videoId}/progress`, {
-      method: 'POST',
+      method: 'PUT',
       body: payload,
     }),
 
@@ -587,7 +586,7 @@ export const studentApi = {
   /* ---------- Question Attempts ---------- */
 
   submitQuestion: (videoId, payload) =>
-    api(`/api/student/videos/${videoId}/questions/attempt`, {
+    api(`/api/student/videos/${videoId}/attempts`, {
       method: 'POST',
       body: payload,
     }),
