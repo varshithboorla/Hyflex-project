@@ -406,7 +406,7 @@ export const videosApi = {
 
   saveEditor: (videoId, payload) =>
     api(`/api/admin/videos/${videoId}/editor`, {
-      method: 'PATCH',
+      method: 'PUT',
       body: payload,
     }),
 

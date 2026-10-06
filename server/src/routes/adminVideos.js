@@ -16,7 +16,7 @@ router.get('/videos', async (req,res)=>{
   }catch(e){fail(res,e,'Failed to load videos.');}
 });
 
-router.get('/videos/:id', async(req,res)=>{
+router.get(['/videos/:id','/videos/:id/editor'], async(req,res)=>{
   try{
     const id=Number(req.params.id);
     const v=await supabase.from('videos').select('video_id,offering_id,video_title,youtube_url,description,display_order,block_forward_seek,pause_at_questions,playback_speed,start_date,end_date,created_at,updated_at').eq('video_id',id).single();
