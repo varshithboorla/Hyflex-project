@@ -11,7 +11,7 @@ export default function VideosPage(){
  const navigate=useNavigate();
  const [offerings,setOfferings]=useState([]),[selectedOffering,setSelectedOffering]=useState(''),[videos,setVideos]=useState([]),[loading,setLoading]=useState(true),[search,setSearch]=useState(''),[message,setMessage]=useState(null),[videoModal,setVideoModal]=useState(null),[editor,setEditor]=useState(null),[editorTab,setEditorTab]=useState('questions'),[qModal,setQModal]=useState(null);
  const notify=(type,text)=>{setMessage({type,text});setTimeout(()=>setMessage(null),3500)};
- const loadOfferings=async()=>{try{const r=await videosApi.getOfferings();const list=r.offerings||[];setOfferings(list);const requested=new URLSearchParams(window.location.search).get('offering_id');if(requested&&list.some(o=>String(o.id)===String(requested))){setSelectedOffering(String(requested));}else if(!selectedOffering&&list[0]){setSelectedOffering(String(list[0].id));}}catch(e){notify('error',e.message)}};
+ const loadOfferings=async()=>{try{const r=await videosApi.getOfferings();setOfferings(r.offerings||[]); if(!selectedOffering&&r.offerings?.[0]) setSelectedOffering(String(r.offerings[0].id));}catch(e){notify('error',e.message)}};
  const loadVideos=async(id=selectedOffering)=>{if(!id){setVideos([]);setLoading(false);return} setLoading(true);try{const r=await videosApi.getVideos({offering_id:id});setVideos(r.videos||[])}catch(e){notify('error',e.message)}finally{setLoading(false)}};
  useEffect(()=>{loadOfferings()},[]); useEffect(()=>{loadVideos()},[selectedOffering]);
  const offering=offerings.find(o=>String(o.id)===String(selectedOffering));
