@@ -8,31 +8,19 @@ export default function StudentVideoPage(){
  const [data,setData]=useState(null),[loading,setLoading]=useState(true),[error,setError]=useState('');
  const [time,setTime]=useState(0),[duration,setDuration]=useState(0),[maxWatched,setMaxWatched]=useState(0),[playing,setPlaying]=useState(false),[muted,setMuted]=useState(false);
  const [speed,setSpeed]=useState(1),[question,setQuestion]=useState(null),[selected,setSelected]=useState(''),[explanation,setExplanation]=useState(''),[saving,setSaving]=useState(false),[courseVideos,setCourseVideos]=useState([]);
- const playerRef=useRef(null), fullscreenRef=useRef(null), tickRef=useRef(null), maxRef=useRef(0), seekingRef=useRef(false), answeredRef=useRef(new Set()), questionRef=useRef(null), durationRef=useRef(0), dataRef=useRef(null), questionPauseTimeRef=useRef(0), lastProgressSaveRef=useRef(0);
+ const playerRef=useRef(null), fullscreenRef=useRef(null), tickRef=useRef(null), maxRef=useRef(0), seekingRef=useRef(false), answeredRef=useRef(new Set()), questionRef=useRef(null), durationRef=useRef(0);
  const courseId=location.state?.courseId;
- useEffect(()=>{let live=true; setLoading(true);studentApi.getVideo(videoId).then(d=>{if(!live)return;dataRef.current=d;setData(d); const p=d.progress; const m=Number(p?.max_watched_seconds||0);maxRef.current=m;setMaxWatched(m);answeredRef.current=new Set((d.attempts||[]).map(a=>Number(a.question_id))); setSpeed(Number(d.video.playback_speed||1)); questionRef.current=null;}).catch(e=>setError(e.message)).finally(()=>live&&setLoading(false));return()=>{live=false}},[videoId]);
+ useEffect(()=>{let live=true; setLoading(true);studentApi.getVideo(videoId).then(d=>{if(!live)return;setData(d); const p=d.progress; const m=Number(p?.max_watched_seconds||0);maxRef.current=m;setMaxWatched(m);answeredRef.current=new Set((d.attempts||[]).map(a=>Number(a.question_id))); setSpeed(Number(d.video.playback_speed||1)); questionRef.current=null;}).catch(e=>setError(e.message)).finally(()=>live&&setLoading(false));return()=>{live=false}},[videoId]);
 
  useEffect(()=>{ if(!courseId) return; studentApi.getCourseVideos(courseId).then(r=>setCourseVideos(r.videos||[])).catch(()=>{}); },[courseId]);
 
  const saveProgress=useCallback(async(force=false)=>{
-   const currentData=dataRef.current;
-   if(!currentData||!playerRef.current)return;
-   let currentTime=maxRef.current;
-   try{currentTime=Number(playerRef.current.getCurrentTime?.() ?? maxRef.current)}catch{}
-   if(Number.isFinite(currentTime)&&currentTime>maxRef.current)maxRef.current=currentTime;
-   const totalQ=currentData.questions.length;
-   const solved=answeredRef.current.size;
-   const correct=(currentData.attempts||[]).filter(a=>a.is_correct).length;
-   const currentDuration=durationRef.current||duration;
-   const done=currentDuration>0&&maxRef.current>=Math.max(0,currentDuration-2)&&solved>=totalQ;
-   const savedMax=Number(currentData.progress?.max_watched_seconds||0);
-   if(!force&&maxRef.current<=savedMax+0.5&&!done)return;
-   try{
-     await studentApi.saveVideoProgress(videoId,{max_watched_seconds:Math.floor(Math.max(maxRef.current,savedMax)),questions_solved:solved,total_questions:totalQ,correct_answers:correct,completed:done});
-     lastProgressSaveRef.current=maxRef.current;
-     dataRef.current={...dataRef.current,progress:{...(dataRef.current.progress||{}),max_watched_seconds:Math.floor(Math.max(maxRef.current,savedMax)),questions_solved:solved,total_questions:totalQ,correct_answers:correct,completed:done}};
-   }catch(e){console.error('Video progress save failed:',e)}
- },[duration,videoId]);
+   if(!data||!playerRef.current)return;
+   const totalQ=data.questions.length; const solved=answeredRef.current.size; const correct=(data.attempts||[]).filter(a=>a.is_correct).length;
+   const done=duration>0 && maxRef.current>=Math.max(0,duration-2) && solved>=totalQ;
+   if(!force && maxRef.current<=Number(data.progress?.max_watched_seconds||0)+1 && !done)return;
+   try{await studentApi.saveVideoProgress(videoId,{max_watched_seconds:Math.floor(maxRef.current),questions_solved:solved,total_questions:totalQ,correct_answers:correct,completed:done});}catch(e){console.error(e)}
+ },[data,duration,videoId]);
  useEffect(()=>{ questionRef.current=question; },[question]);
  useEffect(()=>{ durationRef.current=duration; },[duration]);
  const saveProgressRef=useRef(saveProgress); useEffect(()=>{saveProgressRef.current=saveProgress},[saveProgress]);
@@ -40,77 +28,29 @@ export default function StudentVideoPage(){
 
  useEffect(()=>{
    if(!data)return;
-   let mounted=true;
-   const host=document.getElementById('student-youtube-player');
-   if(!host)return;
-   const init=()=>{
-     if(!mounted||!window.YT?.Player)return;
-     if(playerRef.current){try{playerRef.current.destroy()}catch{}playerRef.current=null;}
-     const latest=dataRef.current;
-     const vid=extract(latest?.video?.youtube_url);
-     if(!vid){setError('Invalid YouTube URL.');return;}
-     playerRef.current=new window.YT.Player(host,{
-       videoId:vid,width:'100%',height:'100%',
-       playerVars:{enablejsapi:1,rel:0,modestbranding:1,controls:0,disablekb:1,playsinline:1},
-       events:{
-         onReady:e=>{
-           if(!mounted)return;
-           const current=dataRef.current;
-           const d=Number(e.target.getDuration()||0);
-           setDuration(d);durationRef.current=d;
-           const saved=Number(current?.progress?.max_watched_seconds||0);
-           maxRef.current=Math.max(maxRef.current,saved);setMaxWatched(maxRef.current);
-           if(maxRef.current>0)e.target.seekTo(maxRef.current,true);
-           try{e.target.setPlaybackRate(Number(current?.video?.playback_speed||1));}catch{}
-         },
-         onStateChange:e=>{
-           setPlaying(e.data===window.YT.PlayerState.PLAYING);
-           if(e.data===window.YT.PlayerState.PLAYING&&!tickRef.current)startTick();
-           if(e.data===window.YT.PlayerState.PAUSED)saveProgressRef.current(true);
-           if(e.data===window.YT.PlayerState.ENDED){
-             setPlaying(false);maxRef.current=Math.max(maxRef.current,durationRef.current);setMaxWatched(maxRef.current);saveProgressRef.current(true);
-           }
-         },
-         onPlaybackRateChange:e=>setSpeed(e.data),
-         onError:e=>console.error('YouTube player error:',e.data)
-       }
-     });
-   };
-   const startTick=()=>{
-     clearInterval(tickRef.current);
-     tickRef.current=setInterval(()=>{
-       const p=playerRef.current;if(!p?.getCurrentTime)return;
-       let t=Number(p.getCurrentTime()||0);setTime(t);
-       const latest=dataRef.current;if(!latest)return;
-       if(!seekingRef.current&&latest.video.block_forward_seek&&t>maxRef.current+2){
-         seekingRef.current=true;p.seekTo(maxRef.current,true);setTimeout(()=>seekingRef.current=false,250);t=maxRef.current;
-       }
-       if(!seekingRef.current&&t>maxRef.current){
-         maxRef.current=t;setMaxWatched(t);
-         if(t-lastProgressSaveRef.current>=3)saveProgressRef.current(false);
-       }
-       const skip=(latest.skips||[]).find(x=>t>=Number(x.start_time_seconds)&&t<Number(x.end_time_seconds));
-       if(skip&&!seekingRef.current){seekingRef.current=true;p.seekTo(Number(skip.end_time_seconds),true);setTimeout(()=>seekingRef.current=false,250);return;}
-       if(!questionRef.current&&latest.video.pause_at_questions){
-         const q=(latest.questions||[]).find(q=>!answeredRef.current.has(Number(q.question_id))&&t>=Number(q.timestamp_seconds)&&t<Number(q.timestamp_seconds)+1.5);
-         if(q){
-           questionPauseTimeRef.current=t;maxRef.current=Math.max(maxRef.current,t);setMaxWatched(maxRef.current);
-           saveProgressRef.current(true);p.pauseVideo();questionRef.current=q;setQuestion(q);setSelected('');setExplanation('');
-         }
-       }
-     },300);
-   };
-   if(window.YT?.Player)init();
-   else{
-     const existing=document.querySelector('script[src="https://www.youtube.com/iframe_api"]');
-     const old=window.onYouTubeIframeAPIReady;
-     window.onYouTubeIframeAPIReady=()=>{old?.();init();};
-     if(!existing){const script=document.createElement('script');script.src='https://www.youtube.com/iframe_api';document.head.appendChild(script);}
+   const id='yt-iframe-api';
+   const load=()=>{if(window.YT?.Player) create();};
+   function create(){
+     if(playerRef.current) try{playerRef.current.destroy()}catch{}
+     const vid=extract(data.video.youtube_url); if(!vid){setError('Invalid YouTube URL.');return;}
+     playerRef.current=new window.YT.Player('student-youtube-player',{videoId:vid,width:'100%',height:'100%',playerVars:{rel:0,modestbranding:1,controls:0,disablekb:1,playsinline:1},events:{
+       onReady:e=>{setDuration(e.target.getDuration()); if(Number(data.progress?.max_watched_seconds||0)>0)e.target.seekTo(Number(data.progress.max_watched_seconds),true); try{e.target.setPlaybackRate(Number(data.video.playback_speed||1));}catch{}},
+       onStateChange:e=>{setPlaying(e.data===window.YT.PlayerState.PLAYING); if(e.data===window.YT.PlayerState.PLAYING&&!tickRef.current)startTick(); if(e.data===window.YT.PlayerState.ENDED){setPlaying(false);maxRef.current=Math.max(maxRef.current,durationRef.current);setMaxWatched(maxRef.current);saveProgressRef.current(true)}},
+       onPlaybackRateChange:e=>setSpeed(e.data)
+     }});
    }
-   return()=>{mounted=false;clearInterval(tickRef.current);saveProgressRef.current(true);try{playerRef.current?.destroy()}catch{}playerRef.current=null;};
- },[videoId,!!data]);
+   if(window.YT?.Player) create(); else {window.onYouTubeIframeAPIReady=load;if(!document.getElementById(id)){const s=document.createElement('script');s.id=id;s.src='https://www.youtube.com/iframe_api';document.body.appendChild(s)}}
+   function startTick(){clearInterval(tickRef.current);tickRef.current=setInterval(()=>{const p=playerRef.current;if(!p?.getCurrentTime)return;let t=Number(p.getCurrentTime()||0);setTime(t);
+      if(!seekingRef.current && data.video.block_forward_seek && t>maxRef.current+2){seekingRef.current=true;p.seekTo(maxRef.current,true);setTimeout(()=>seekingRef.current=false,250);t=maxRef.current}
+      if(!seekingRef.current && t>maxRef.current){maxRef.current=t;setMaxWatched(t)}
+      const skip=(data.skips||[]).find(x=>t>=Number(x.start_time_seconds)&&t<Number(x.end_time_seconds));
+      if(skip&&!seekingRef.current){seekingRef.current=true;p.seekTo(Number(skip.end_time_seconds),true);setTimeout(()=>seekingRef.current=false,250);return}
+      if(!questionRef.current && data.video.pause_at_questions){const q=(data.questions||[]).find(q=>!answeredRef.current.has(Number(q.question_id))&&t>=Number(q.timestamp_seconds)&&t<Number(q.timestamp_seconds)+1.5);if(q){p.pauseVideo();questionRef.current=q;setQuestion(q);setSelected('');setExplanation('')}}
+   },300)}
+   return()=>{clearInterval(tickRef.current);try{playerRef.current?.destroy()}catch{}playerRef.current=null};
+ },[data,videoId]); // initialize once per selected video
 
- const submit=async()=>{if(!question||!selected||saving)return; const option=(question.question_options||[]).find(o=>String(o.option_id)===String(selected)); if(!option)return;setSaving(true);try{await studentApi.submitQuestion(videoId,{question_id:question.question_id,selected_option_id:option.option_id,is_correct:!!option.is_correct});answeredRef.current.add(Number(question.question_id));const updatedAttempts=[...(dataRef.current?.attempts||[]).filter(a=>Number(a.question_id)!==Number(question.question_id)),{question_id:question.question_id,is_correct:!!option.is_correct}];dataRef.current={...dataRef.current,attempts:updatedAttempts};setData(prev=>({...prev,attempts:updatedAttempts}));setExplanation(option.is_correct?(question.explanation||'Correct answer.'):(question.explanation||'Incorrect answer.'));maxRef.current=Math.max(maxRef.current,questionPauseTimeRef.current);setMaxWatched(maxRef.current);await saveProgressRef.current(true);setTimeout(()=>{questionRef.current=null;setQuestion(null);setExplanation('');const p=playerRef.current;if(p){try{seekingRef.current=true;p.seekTo(questionPauseTimeRef.current,true);p.playVideo?.();setTimeout(()=>seekingRef.current=false,400)}catch{}}},1100)}catch(e){setExplanation(e.message)}finally{setSaving(false)}};
+ const submit=async()=>{if(!question||!selected||saving)return; const option=(question.question_options||[]).find(o=>String(o.option_id)===String(selected)); if(!option)return;setSaving(true);try{await studentApi.submitQuestion(videoId,{question_id:question.question_id,selected_option_id:option.option_id,is_correct:!!option.is_correct});answeredRef.current.add(Number(question.question_id));setData(prev=>({...prev,attempts:[...(prev.attempts||[]).filter(a=>Number(a.question_id)!==Number(question.question_id)),{question_id:question.question_id,is_correct:!!option.is_correct}]}));setExplanation(option.is_correct?(question.explanation||'Correct answer.'):(question.explanation||'Incorrect answer.'));setTimeout(()=>{questionRef.current=null;setQuestion(null);setExplanation('');playerRef.current?.playVideo?.();saveProgressRef.current(true)},1100)}catch(e){setExplanation(e.message)}finally{setSaving(false)}};
  const rewatch=()=>{const t=Math.max(0,time-15);seekingRef.current=true;playerRef.current?.seekTo(t,true);playerRef.current?.playVideo();questionRef.current=null;setQuestion(null);setExplanation('');setTimeout(()=>seekingRef.current=false,400)};
  const togglePlay=()=>{const p=playerRef.current;if(!p)return;playing?p.pauseVideo():p.playVideo()};
  const seek=e=>{const requested=Number(e.target.value); if(data?.video?.block_forward_seek && requested>maxRef.current){e.target.value=String(Math.floor(maxRef.current));return} seekingRef.current=true;playerRef.current?.seekTo(requested,true);setTimeout(()=>seekingRef.current=false,250)};
