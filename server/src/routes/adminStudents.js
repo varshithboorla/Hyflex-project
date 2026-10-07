@@ -223,10 +223,177 @@ router.post('/students/move', async (req, res) => {
 
     const { data: students, error: studentsError } = await supabase
       .from('students')
-      .select('id,semester_id')
+      .select('id,semester_id,branch_id,batch_id')
       .in('id', ids);
     if (studentsError) throw studentsError;
     if ((students || []).length !== ids.length) return res.status(404).json({ message: 'One or more selected students were not found.' });
+
+    // Cache metadata used by permanent progress history snapshots.
+    const [branchesR, batchesR] = await Promise.all([
+      supabase.from('branches').select('id,name'),
+      supabase.from('batches').select('id,label')
+    ]);
+    if (branchesR.error) throw branchesR.error;
+    if (batchesR.error) throw batchesR.error;
+    const branchMap = new Map((branchesR.data || []).map(x => [Number(x.id), x]));
+    const batchMap = new Map((batchesR.data || []).map(x => [Number(x.id), x]));
+
+    // Snapshot the current semester BEFORE changing the enrollment.
+    // The snapshot always keeps the OLD enrollment/year/semester so it remains
+    // permanently tied to the semester the student is leaving.
+    const archiveCurrentProgress = async (student, enrollment) => {
+      if (!enrollment) return { videoCount: 0, questionCount: 0 };
+
+      const [progressR, attemptsR] = await Promise.all([
+        supabase.from('student_video_progress')
+          .select('id,student_id,video_id,max_watched_seconds,questions_solved,total_questions,correct_answers,completed,created_at,updated_at')
+          .eq('student_id', student.id),
+        supabase.from('student_question_attempts')
+          .select('id,student_id,question_id,video_id,selected_option_id,is_correct,attempted_at')
+          .eq('student_id', student.id)
+      ]);
+      if (progressR.error) throw progressR.error;
+      if (attemptsR.error) throw attemptsR.error;
+
+      const progress = progressR.data || [];
+      const attempts = attemptsR.data || [];
+      if (!progress.length && !attempts.length) return { videoCount: 0, questionCount: 0 };
+
+      const videoIds = [...new Set([
+        ...progress.map(x => Number(x.video_id)).filter(Number.isInteger),
+        ...attempts.map(x => Number(x.video_id)).filter(Number.isInteger)
+      ])];
+
+      let videos = [];
+      let offerings = [];
+      let courses = [];
+      if (videoIds.length) {
+        const videosR = await supabase.from('videos')
+          .select('video_id,offering_id,video_title,display_order')
+          .in('video_id', videoIds);
+        if (videosR.error) throw videosR.error;
+        videos = videosR.data || [];
+
+        const offeringIds = [...new Set(videos.map(v => Number(v.offering_id)).filter(Number.isInteger))];
+        if (offeringIds.length) {
+          const offeringsR = await supabase.from('course_offerings')
+            .select('id,course_id,academic_year_id,semester_id,batch_id')
+            .in('id', offeringIds);
+          if (offeringsR.error) throw offeringsR.error;
+          offerings = offeringsR.data || [];
+
+          const courseIds = [...new Set(offerings.map(o => Number(o.course_id)).filter(Number.isInteger))];
+          if (courseIds.length) {
+            const coursesR = await supabase.from('courses')
+              .select('course_id,course_name,course_code')
+              .in('course_id', courseIds);
+            if (coursesR.error) throw coursesR.error;
+            courses = coursesR.data || [];
+          }
+        }
+      }
+
+      const videoMap = new Map(videos.map(v => [Number(v.video_id), v]));
+      const offeringMap = new Map(offerings.map(o => [Number(o.id), o]));
+      const courseMap = new Map(courses.map(c => [Number(c.course_id), c]));
+      const branch = branchMap.get(Number(student.branch_id));
+      const batch = batchMap.get(Number(student.batch_id));
+
+      const historyVideos = progress.map(p => {
+        const video = videoMap.get(Number(p.video_id));
+        const offering = video ? offeringMap.get(Number(video.offering_id)) : null;
+        const course = offering ? courseMap.get(Number(offering.course_id)) : null;
+        return {
+          student_id: student.id,
+          enrollment_id: enrollment.id,
+          academic_year_id: Number(enrollment.academic_year_id),
+          semester_id: Number(enrollment.semester_id),
+          record_type: 'video',
+          source_id: p.id,
+          video_id: Number(p.video_id),
+          course_id: course?.course_id ?? offering?.course_id ?? null,
+          course_name: course?.course_name ?? null,
+          course_code: course?.course_code ?? null,
+          offering_id: video?.offering_id ?? null,
+          video_title: video?.video_title ?? null,
+          display_order: video?.display_order ?? null,
+          branch_id: Number(student.branch_id),
+          branch_name: branch?.name ?? null,
+          batch_id: Number(student.batch_id),
+          batch_label: batch?.label ?? null,
+          max_watched_seconds: Number(p.max_watched_seconds) || 0,
+          questions_solved: Number(p.questions_solved) || 0,
+          total_questions: Number(p.total_questions) || 0,
+          correct_answers: Number(p.correct_answers) || 0,
+          completed: !!p.completed,
+          snapshot_at: new Date().toISOString()
+        };
+      });
+
+      const historyQuestions = attempts.map(a => {
+        const video = videoMap.get(Number(a.video_id));
+        const offering = video ? offeringMap.get(Number(video.offering_id)) : null;
+        const course = offering ? courseMap.get(Number(offering.course_id)) : null;
+        return {
+          student_id: student.id,
+          enrollment_id: enrollment.id,
+          academic_year_id: Number(enrollment.academic_year_id),
+          semester_id: Number(enrollment.semester_id),
+          record_type: 'question',
+          source_id: a.id,
+          video_id: Number(a.video_id),
+          question_id: Number(a.question_id),
+          selected_option_id: a.selected_option_id == null ? null : Number(a.selected_option_id),
+          is_correct: !!a.is_correct,
+          attempted_at: a.attempted_at || null,
+          course_id: course?.course_id ?? offering?.course_id ?? null,
+          course_name: course?.course_name ?? null,
+          course_code: course?.course_code ?? null,
+          offering_id: video?.offering_id ?? null,
+          video_title: video?.video_title ?? null,
+          display_order: video?.display_order ?? null,
+          branch_id: Number(student.branch_id),
+          branch_name: branch?.name ?? null,
+          batch_id: Number(student.batch_id),
+          batch_label: batch?.label ?? null,
+          snapshot_at: new Date().toISOString()
+        };
+      });
+
+      // Make the operation idempotent if a previous move partially succeeded.
+      const videoSourceIds = historyVideos.map(x => Number(x.source_id)).filter(Number.isInteger);
+      const questionSourceIds = historyQuestions.map(x => Number(x.source_id)).filter(Number.isInteger);
+      if (videoSourceIds.length) {
+        const del = await supabase.from('student_progress_history')
+          .delete().eq('student_id', student.id).eq('record_type', 'video').in('source_id', videoSourceIds);
+        if (del.error) throw del.error;
+      }
+      if (questionSourceIds.length) {
+        const del = await supabase.from('student_progress_history')
+          .delete().eq('student_id', student.id).eq('record_type', 'question').in('source_id', questionSourceIds);
+        if (del.error) throw del.error;
+      }
+
+      if (historyVideos.length) {
+        const inserted = await supabase.from('student_progress_history').insert(historyVideos);
+        if (inserted.error) throw inserted.error;
+      }
+      if (historyQuestions.length) {
+        const inserted = await supabase.from('student_progress_history').insert(historyQuestions);
+        if (inserted.error) throw inserted.error;
+      }
+
+      // Current progress belongs to the old semester and must not leak into the new one.
+      const deleteAttempts = await supabase.from('student_question_attempts').delete().eq('student_id', student.id);
+      if (deleteAttempts.error) throw deleteAttempts.error;
+      const deleteProgress = await supabase.from('student_video_progress').delete().eq('student_id', student.id);
+      if (deleteProgress.error) throw deleteProgress.error;
+
+      return { videoCount: historyVideos.length, questionCount: historyQuestions.length };
+    };
+
+    let archivedVideoCount = 0;
+    let archivedQuestionCount = 0;
 
     for (const student of students) {
       const currentResult = await supabase
@@ -242,6 +409,13 @@ router.post('/students/move', async (req, res) => {
       if (from && Number(from.academic_year_id) === targetYear && Number(from.semester_id) === targetSemester) {
         await supabase.from('students').update({ semester_id: targetSemester, updated_at: new Date().toISOString() }).eq('id', student.id);
         continue;
+      }
+
+      // IMPORTANT: archive old semester progress before closing the old enrollment.
+      if (from) {
+        const archived = await archiveCurrentProgress(student, from);
+        archivedVideoCount += archived.videoCount;
+        archivedQuestionCount += archived.questionCount;
       }
 
       const targetResult = await supabase
@@ -292,7 +466,12 @@ router.post('/students/move', async (req, res) => {
       }
     }
 
-    res.json({ message: `${ids.length} student${ids.length === 1 ? '' : 's'} moved successfully.`, moved: ids.length });
+    res.json({
+      message: `${ids.length} student${ids.length === 1 ? '' : 's'} moved successfully.`,
+      moved: ids.length,
+      archived_video_records: archivedVideoCount,
+      archived_question_records: archivedQuestionCount
+    });
   } catch (error) {
     console.error('Move students error:', error);
     res.status(500).json({ message: error.message || 'Unable to move students.' });
