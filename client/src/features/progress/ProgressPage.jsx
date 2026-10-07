@@ -76,32 +76,8 @@ export default function ProgressPage(){
     'Topic Score':score(r.topicScore),'Cumulative Score (out of 100)':score(r.cumulativeScore),'Topics Completed':r.topicsCompleted,'Topics Not Completed':r.topicsNotCompleted,'Status':statusLabel(r.status),'Last Updated':r.current?.p?.updated_at?new Date(r.current.p.updated_at).toLocaleString():''
   }));
 
-  // Excel export is intentionally different from the on-screen student table.
-  // It shows the score for every topic from Topic 1 through the selected topic,
-  // followed by the cumulative score up to the selected topic. Watched/section
-  // columns are omitted from the Excel report.
-  const excelRows=filteredStudents.map((r,i)=>{
-    const row={'S.No':i+1,'Roll No':r.student?.roll_number||'','Student':[r.student?.first_name,r.student?.last_name].filter(Boolean).join(' '),'Email':r.student?.email||''};
-    let scoreSum=0;
-    const topicList=detail?.topics?.slice(0, Math.max(0, detail.topics.findIndex(t=>Number(t.video_id)===Number(selected?.video_id)))+1) || [];
-    topicList.forEach((topic,index)=>{
-      const p=progressMap.get(`${r.student_id}:${topic.video_id}`);
-      const total=Number(p?.total_questions)||0;
-      const correct=Number(p?.correct_answers)||0;
-      const topicScore=p?.completed && total>0 ? Math.min(100,(correct/total)*100) : 0;
-      scoreSum+=topicScore;
-      row[`Topic ${index+1} Score`]=score(topicScore);
-    });
-    row[`Cumulative Score (Up to Topic ${topicList.length})`]=score(topicList.length ? scoreSum/topicList.length : 0);
-    row['Topics Completed']=r.topicsCompleted;
-    row['Topics Not Completed']=r.topicsNotCompleted;
-    row['Status']=statusLabel(r.status);
-    row['Last Updated']=r.current?.p?.updated_at?new Date(r.current.p.updated_at).toLocaleString():'';
-    return row;
-  });
-
   const exportCsv=()=>{if(!exportRows.length)return;const headers=Object.keys(exportRows[0]);const csv=[headers,...exportRows.map(r=>headers.map(h=>r[h]??''))].map(row=>row.map(v=>`"${String(v).replace(/"/g,'""')}"`).join(',')).join('\r\n');downloadBlob('\ufeff'+csv,'text/csv;charset=utf-8;',`EduLearn_${safe(selected?.video_title)}_Student_Progress.csv`)};
-  const exportExcel=()=>{if(!excelRows.length)return;const headers=Object.keys(excelRows[0]);const html=`<html><head><meta charset="UTF-8"></head><body><table border="1"><thead><tr>${headers.map(h=>`<th>${esc(h)}</th>`).join('')}</tr></thead><tbody>${excelRows.map(r=>`<tr>${headers.map(h=>`<td>${esc(r[h])}</td>`).join('')}</tr>`).join('')}</tbody></table></body></html>`;downloadBlob(html,'application/vnd.ms-excel',`EduLearn_${safe(selected?.video_title)}_Student_Progress.xls`)};
+  const exportExcel=()=>{if(!exportRows.length)return;const headers=Object.keys(exportRows[0]);const html=`<html><head><meta charset="UTF-8"></head><body><table border="1"><thead><tr>${headers.map(h=>`<th>${esc(h)}</th>`).join('')}</tr></thead><tbody>${exportRows.map(r=>`<tr>${headers.map(h=>`<td>${esc(r[h])}</td>`).join('')}</tr>`).join('')}</tbody></table></body></html>`;downloadBlob(html,'application/vnd.ms-excel',`EduLearn_${safe(selected?.video_title)}_Student_Progress.xls`)};
   const printReport=()=>{
     if(!filteredStudents.length || !selected || !detail || !data) return;
 
@@ -140,6 +116,8 @@ export default function ProgressPage(){
         <td>${i+1}</td>
         <td>${esc(r.student?.roll_number||'—')}</td>
         <td class="left">${esc([r.student?.first_name,r.student?.last_name].filter(Boolean).join(' ')||'—')}</td>
+        <td>${pct(r.watchedPct)}</td>
+        <td>${pct(r.cumulativeWatchedPct)}</td>
         <td>${score(r.topicScore)}</td>
         <td>${score(r.cumulativeScore)}</td>
         <td>${r.topicsCompleted}</td>
@@ -149,7 +127,7 @@ export default function ProgressPage(){
       return `<section class="branch-section">
         <div class="branch-title"><span>${esc(name)}</span><span>${rows.length} student${rows.length===1?'':'s'} • ${done} completed • ${rows.length-done} not completed</span></div>
         <table class="student-table"><thead><tr>
-          <th>S.No</th><th>Roll<br>Number</th><th>Student</th><th>Topic ${topicNumber}<br>Score</th><th>Cumulative Score<br>(out of 100)</th><th>Topics<br>Completed</th><th>Topics Not<br>Completed</th><th>Status</th>
+          <th>S.No</th><th>Roll<br>Number</th><th>Student</th><th>Topic<br>Watched %</th><th>Cumulative<br>Watched %</th><th>Topic ${topicNumber}<br>Score</th><th>Cumulative Score<br>(out of 100)</th><th>Topics<br>Completed</th><th>Topics Not<br>Completed</th><th>Status</th>
         </tr></thead><tbody>${studentRows}</tbody></table>
       </section>`;
     }).join('');
@@ -180,7 +158,7 @@ export default function ProgressPage(){
         .total td{background:#294f86;color:#fff;font-weight:800}
         .branch-section{break-inside:avoid;margin-bottom:8px}
         .branch-title{display:flex;justify-content:space-between;align-items:center;background:#eaf1f8;border-left:4px solid #294f86;color:#294f86;font-weight:800;font-size:7.5px;padding:4px 5px;margin-bottom:3px}
-        .student-table th:nth-child(1){width:6%}.student-table th:nth-child(2){width:13%}.student-table th:nth-child(3){width:24%}.student-table th:nth-child(4){width:12%}.student-table th:nth-child(5){width:16%}.student-table th:nth-child(6){width:10%}.student-table th:nth-child(7){width:10%}.student-table th:nth-child(8){width:9%}
+        .student-table th:nth-child(1){width:5%}.student-table th:nth-child(2){width:10%}.student-table th:nth-child(3){width:17%}.student-table th:nth-child(4){width:9%}.student-table th:nth-child(5){width:10%}.student-table th:nth-child(6){width:9%}.student-table th:nth-child(7){width:12%}.student-table th:nth-child(8){width:8%}.student-table th:nth-child(9){width:9%}.student-table th:nth-child(10){width:11%}
         .footer{position:fixed;left:0;right:0;bottom:2mm;display:flex;justify-content:space-between;color:#6b7280;font-size:6.5px;font-weight:700}
         .dean{text-align:right;font-weight:800;font-size:7px;color:#3f4650;margin-top:5px}
         @media print{.no-print{display:none}.page{min-height:auto}}
