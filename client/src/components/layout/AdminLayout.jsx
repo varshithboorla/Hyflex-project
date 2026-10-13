@@ -60,7 +60,7 @@ export default function AdminLayout({ session, onLogout, children }) {
               <button onClick={() => setMobileOpen(true)} className="rounded-lg p-2 text-slate-600 hover:bg-slate-100 lg:hidden"><Menu size={21} /></button>
               <div>
                 <h1 className="text-xl font-bold text-slate-900 sm:text-[22px]">{active.label}</h1>
-                <p className="mt-0.5 text-xs text-slate-500">Manage EduLearn</p>
+                <p className="mt-0.5 text-xs text-slate-500">Manage HyFlex</p>
               </div>
             </div>
             <div className="flex items-center gap-3">

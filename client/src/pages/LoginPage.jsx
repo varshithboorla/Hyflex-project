@@ -33,17 +33,17 @@ export default function LoginPage({ onLogin }) {
   return (
     <div className="login-wrapper">
       <div className="login-brand">
-        <div className="logo">E</div>
+        <div className="logo">H</div>
 
         <div>
-          <h1>EduLearn</h1>
+          <h1>HyFlex</h1>
           <p>Learning Management System</p>
         </div>
       </div>
 
       <form className="login-card" onSubmit={submit}>
         <h2>Welcome Back</h2>
-        <p className="subtitle">Login to continue to EduLearn</p>
+        <p className="subtitle">Login to continue to HyFlex</p>
 
         <div className="form-group">
           <label htmlFor="loginIdentifier">Email / Roll Number</label>

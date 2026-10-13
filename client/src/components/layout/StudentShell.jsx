@@ -35,8 +35,8 @@ export default function StudentShell({ session, onLogout }) {
     <div className="student-app">
       <aside className={`student-sidebar ${sidebarOpen ? 'open' : ''}`}>
         <div className="student-brand">
-          <div className="student-logo">E</div>
-          <span>EduLearn</span>
+          <div className="student-logo">H</div>
+          <span>HyFlex</span>
         </div>
         <nav className="student-nav">
           {nav('/student', 'Dashboard', Grid2X2)}
